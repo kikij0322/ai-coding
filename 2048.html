@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🍦 冰淇淋 2048</title>
+<link rel="icon" href="/favicon.svg" />
+<link rel="stylesheet" href="/src/styles/shared.css" />
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+  .game-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    z-index: 1;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .title {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .scores {
+    display: flex;
+    gap: 12px;
+  }
+  .score-box {
+    text-align: center;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(6px);
+    padding: 6px 16px;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--pink);
+    box-shadow: var(--shadow-sm);
+  }
+  .score-box .label {
+    font-size: 11px;
+    color: var(--text-light);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .score-box .val {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--pink-deep);
+  }
+
+  .board-frame {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    padding: 12px;
+    box-shadow: var(--shadow-lg), 0 0 0 3px var(--pink);
+  }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    background: #f5ede8;
+    border-radius: var(--radius-md);
+    padding: 10px;
+    width: min(420px, calc(100vw - 60px));
+    aspect-ratio: 1;
+  }
+  .cell {
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    background: #e8ddd3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0; /* hidden until filled */
+    transition: all 0.12s ease;
+    position: relative;
+  }
+  .tile {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-display);
+    font-weight: 700;
+    animation: tilePop 0.15s ease;
+  }
+  @keyframes tilePop {
+    0% { transform: scale(0); }
+    80% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+  @keyframes tileMerge {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+
+  .bottom-bar {
+    display: flex;
+    gap: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="game-wrapper">
+  <div class="header">
+    <div class="title">🍦 2048</div>
+    <div class="scores">
+      <div class="score-box">
+        <div class="label">⭐ 分数</div>
+        <div class="val" id="scoreVal">0</div>
+      </div>
+      <div class="score-box">
+        <div class="label">🏆 最高</div>
+        <div class="val" id="bestVal">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="board-frame">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="bottom-bar">
+    <button class="btn btn-secondary" id="btnUndo">↩ 撤销</button>
+    <button class="btn btn-primary" id="btnNew">🔄 新游戏</button>
+  </div>
+</div>
+
+<a href="index.html" class="back-btn">← 大厅</a>
+
+<script type="module">
+import { getHighScore, setHighScore } from "/src/js/storage.js";
+
+const SIZE = 4;
+let grid = [];
+let score = 0;
+let best = getHighScore("2048");
+let history = []; // for undo
+
+const elBoard = document.getElementById("board");
+const elScore = document.getElementById("scoreVal");
+const elBest = document.getElementById("bestVal");
+const elUndo = document.getElementById("btnUndo");
+const elNew = document.getElementById("btnNew");
+
+elBest.textContent = best;
+
+// Ice cream color palette for numbers
+const TILE_COLORS = {
+  0:    { bg: "#e8ddd3", fg: "transparent" },
+  2:    { bg: "#ffb6c1", fg: "#8B5E3C" },  // strawberry
+  4:    { bg: "#ffeaa7", fg: "#8B5E3C" },  // vanilla
+  8:    { bg: "#fdcb6e", fg: "#8B5E3C" },  // lemon
+  16:   { bg: "#ff9ff3", fg: "#fff" },      // berry
+  32:   { bg: "#fd79a8", fg: "#fff" },      // raspberry
+  64:   { bg: "#e17055", fg: "#fff" },      // orange sorbet
+  128:  { bg: "#a3d2ca", fg: "#fff" },      // mint
+  256:  { bg: "#5eaaa8", fg: "#fff" },      // pistachio
+  512:  { bg: "#f19066", fg: "#fff" },      // peach
+  1024: { bg: "#786fa6", fg: "#fff" },      // blueberry
+  2048: { bg: "#f78fb3", fg: "#fff" },      // rainbow
+  4096: { bg: "#cf6a87", fg: "#fff" },
+  8192: { bg: "#574b90", fg: "#fff" },
+};
+
+function getTileStyle(v) {
+  const c = TILE_COLORS[v] || { bg: "#2c2c54", fg: "#fff" };
+  const size = v >= 1000 ? (v >= 10000 ? "1.5rem" : "2rem") : "2.5rem";
+  return { ...c, size };
+}
+
+function init() {
+  grid = Array.from({ length: SIZE }, () => new Array(SIZE).fill(0));
+  score = 0;
+  history = [];
+  updateUI();
+  addRandom();
+  addRandom();
+  render();
+}
+
+function addRandom() {
+  const empty = [];
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++)
+      if (grid[r][c] === 0) empty.push({ r, c });
+  if (empty.length === 0) return;
+  const { r, c } = empty[Math.floor(Math.random() * empty.length)];
+  grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+}
+
+function slide(row) {
+  let arr = row.filter(v => v !== 0);
+  for (let i = 0; i < arr.length - 1; i++) {
+    if (arr[i] === arr[i + 1]) {
+      arr[i] *= 2;
+      score += arr[i];
+      arr[i + 1] = 0;
+    }
+  }
+  arr = arr.filter(v => v !== 0);
+  while (arr.length < SIZE) arr.push(0);
+  return arr;
+}
+
+function moveGrid(direction) {
+  // Save state for undo
+  history.push({
+    grid: grid.map(r => [...r]),
+    score: score,
+  });
+  if (history.length > 10) history.shift();
+
+  const oldGrid = grid.map(r => [...r]);
+  const oldScore = score;
+  let moved = false;
+
+  if (direction === "left") {
+    for (let r = 0; r < SIZE; r++) {
+      const before = [...grid[r]];
+      grid[r] = slide(grid[r]);
+      if (before.join() !== grid[r].join()) moved = true;
+    }
+  } else if (direction === "right") {
+    for (let r = 0; r < SIZE; r++) {
+      const before = [...grid[r]];
+      const rev = slide([...grid[r]].reverse()).reverse();
+      grid[r] = rev;
+      if (before.join() !== grid[r].join()) moved = true;
+    }
+  } else if (direction === "up") {
+    for (let c = 0; c < SIZE; c++) {
+      const col = [grid[0][c], grid[1][c], grid[2][c], grid[3][c]];
+      const slid = slide(col);
+      for (let r = 0; r < SIZE; r++) {
+        if (grid[r][c] !== slid[r]) moved = true;
+        grid[r][c] = slid[r];
+      }
+    }
+  } else if (direction === "down") {
+    for (let c = 0; c < SIZE; c++) {
+      const col = [grid[0][c], grid[1][c], grid[2][c], grid[3][c]];
+      const slid = slide([...col].reverse()).reverse();
+      for (let r = 0; r < SIZE; r++) {
+        if (grid[r][c] !== slid[r]) moved = true;
+        grid[r][c] = slid[r];
+      }
+    }
+  }
+
+  if (!moved) {
+    history.pop();
+    return;
+  }
+
+  addRandom();
+  updateUI();
+  render();
+
+  if (isGameOver()) {
+    setTimeout(() => {
+      showModal("😢 游戏结束", `最终得分: ${score}`, "再来一局", init);
+    }, 200);
+  }
+}
+
+function isGameOver() {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (grid[r][c] === 0) return false;
+      if (c < SIZE - 1 && grid[r][c] === grid[r][c + 1]) return false;
+      if (r < SIZE - 1 && grid[r][c] === grid[r + 1][c]) return false;
+    }
+  }
+  return true;
+}
+
+function undo() {
+  if (history.length === 0) return;
+  const prev = history.pop();
+  grid = prev.grid;
+  score = prev.score;
+  updateUI();
+  render();
+}
+
+function updateUI() {
+  elScore.textContent = score;
+  if (score > best) {
+    best = score;
+    setHighScore("2048", best);
+    elBest.textContent = best;
+  }
+}
+
+function render() {
+  elBoard.innerHTML = "";
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+
+      const v = grid[r][c];
+      if (v > 0) {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        const style = getTileStyle(v);
+        tile.style.backgroundColor = style.bg;
+        tile.style.color = style.fg;
+        tile.style.fontSize = style.size;
+        tile.textContent = v;
+
+        // Check if this tile was just merged (same value exists elsewhere)
+        tile.style.animationName = "tilePop";
+        cell.appendChild(tile);
+      }
+      elBoard.appendChild(cell);
+    }
+  }
+}
+
+function showModal(title, msg, btnText, onConfirm) {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="emoji-big">🍦</div>
+      <h2>${title}</h2>
+      <p>${msg}</p>
+      <button class="btn btn-primary" id="modalBtn">${btnText}</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector("#modalBtn").addEventListener("click", () => {
+    overlay.remove();
+    onConfirm();
+  });
+}
+
+// ── Input ──
+window.addEventListener("keydown", (e) => {
+  const map = {
+    ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+    w: "up", s: "down", a: "left", d: "right",
+  };
+  const dir = map[e.key];
+  if (dir) {
+    e.preventDefault();
+    moveGrid(dir);
+  }
+  if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    undo();
+  }
+});
+
+// Touch swipe
+let touchStart = null;
+elBoard.addEventListener("touchstart", (e) => {
+  touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+elBoard.addEventListener("touchend", (e) => {
+  if (!touchStart) return;
+  const dx = e.changedTouches[0].clientX - touchStart.x;
+  const dy = e.changedTouches[0].clientY - touchStart.y;
+  const adx = Math.abs(dx), ady = Math.abs(dy);
+  if (Math.max(adx, ady) < 30) return;
+  if (adx > ady) moveGrid(dx > 0 ? "right" : "left");
+  else moveGrid(dy > 0 ? "down" : "up");
+  touchStart = null;
+});
+
+elUndo.addEventListener("click", undo);
+elNew.addEventListener("click", init);
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🍩 甜甜圈连连看</title>
+<link rel="icon" href="/favicon.svg" />
+<link rel="stylesheet" href="/src/styles/shared.css" />
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    position: relative;
+  }
+  .game-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    z-index: 1;
+    position: relative;
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .info-item {
+    text-align: center;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(6px);
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--pink);
+    box-shadow: var(--shadow-sm);
+    min-width: 70px;
+  }
+  .info-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .info-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--pink-deep);
+  }
+  .info-value.urgent {
+    color: #e75480;
+    animation: pulse 0.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .combo-badge {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    color: #e75480;
+    background: var(--pink-light);
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: none;
+  }
+  .combo-badge.active {
+    display: block;
+    animation: popIn 0.3s ease;
+  }
+
+  .canvas-frame {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    padding: 8px;
+    box-shadow: var(--shadow-lg), 0 0 0 3px var(--pink);
+  }
+  canvas {
+    border-radius: var(--radius-md);
+    display: block;
+    background: #fffafc;
+  }
+
+  .bottom-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Combo popup animation */
+  .combo-pop {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-display);
+    font-size: 48px;
+    font-weight: 700;
+    color: #e75480;
+    pointer-events: none;
+    z-index: 300;
+    animation: comboBounce 0.8s ease-out forwards;
+  }
+  @keyframes comboBounce {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+    30% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    60% { transform: translate(-50%, -50%) scale(0.9); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1) translateY(-30px); }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-wrapper">
+  <div class="top-bar">
+    <div class="info-item">
+      <div class="info-label">🎯 关卡</div>
+      <div class="info-value" id="levelNum">1</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">⏱ 时间</div>
+      <div class="info-value" id="timerVal">120</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">⭐ 分数</div>
+      <div class="info-value" id="scoreVal">0</div>
+    </div>
+    <div class="combo-badge" id="comboBadge">🔥 连击 ×1</div>
+  </div>
+
+  <div class="canvas-frame">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <div class="bottom-bar">
+    <button class="btn btn-secondary" id="btnHint">💡 提示 (<span id="hintCount">3</span>)</button>
+    <button class="btn btn-secondary" id="btnShuffle">🔀 洗牌 (<span id="shuffleCount">2</span>)</button>
+  </div>
+</div>
+
+<a href="index.html" class="back-btn">← 大厅</a>
+
+<script type="module">
+import { getHighScore, setHighScore } from "/src/js/storage.js";
+import { playMatch, playFail, playCombo, playLevelUp, playClick, resumeAudio } from "/src/js/audio.js";
+
+// ── Level configs ──
+const LEVELS = [
+  { name: "第1关 · 迷你甜心", rows: 6, cols: 8,  time: 120, types: 24 },
+  { name: "第2关 · 糖霜乐园", rows: 8, cols: 8,  time: 110, types: 32 },
+  { name: "第3关 · 奶油派对", rows: 8, cols: 10, time: 100, types: 40 },
+  { name: "第4关 · 马卡龙塔", rows: 10, cols: 12, time: 90, types: 60 },
+  { name: "第5关 · 甜品盛宴", rows: 10, cols: 14, time: 80, types: 70 },
+];
+
+// Dessert/fruit emojis (70 for max level)
+const ALL_EMOJIS = [
+  "🍓","🍒","🍎","🍉","🍑","🍊","🍋","🍌","🍍","🥝",
+  "🍇","🫐","🍈","🍐","🥭","🍰","🧁","🍩","🍪","🎂",
+  "🍫","🍬","🍭","🍡","🍦","🍨","🍮","🍯","🥞","🧇",
+  "🥐","🍞","🥖","🧀","🍿","🥨","🥠","🍘","🍙","🍚",
+  "🌸","🌺","🌻","🌷","💐","🍀","🌿","🍁","🍂","🍃",
+  "💖","💝","💗","💓","💕","⭐","🌟","✨","🎀","🎁",
+  "🐱","🐶","🐰","🐻","🐼","🐨","🐯","🦊","🐮","🐷",
+];
+
+// ── State ──
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let CELL = 48;
+let gridRows, gridCols, grid;    // grid includes +2 border
+let displayRows, displayCols;    // visible game area
+let currentLevel = 0;
+let score = 0;
+let comboCount = 0;
+let comboTimer = null;
+let hintsLeft = 3;
+let shufflesLeft = 2;
+let timeLeft = 0;
+let timerInterval = null;
+let selected = null;             // { r, c }
+let hintPair = null;            // { r1,c1, r2,c2 } blinking
+let animating = false;
+let matchLine = null;           // [{r,c}, ...] path points for animation
+let matchLineTimer = null;
+
+// ── DOM refs ──
+const elLevel = document.getElementById("levelNum");
+const elTimer = document.getElementById("timerVal");
+const elScore = document.getElementById("scoreVal");
+const elCombo = document.getElementById("comboBadge");
+const elHint = document.getElementById("btnHint");
+const elShuffle = document.getElementById("btnShuffle");
+const elHintCount = document.getElementById("hintCount");
+const elShuffleCount = document.getElementById("shuffleCount");
+
+// ── Init level ──
+function initLevel(lvl) {
+  currentLevel = lvl;
+  const cfg = LEVELS[lvl];
+  displayRows = cfg.rows;
+  displayCols = cfg.cols;
+  gridRows = displayRows + 2;
+  gridCols = displayCols + 2;
+
+  // Resize canvas
+  CELL = Math.min(52, Math.floor((Math.min(window.innerWidth - 60, 750)) / displayCols));
+  canvas.width = displayCols * CELL + 1;
+  canvas.height = displayRows * CELL + 1;
+
+  // Build grid: 0 = empty border, >0 = tile
+  grid = [];
+  for (let r = 0; r < gridRows; r++) {
+    grid[r] = new Array(gridCols).fill(0);
+  }
+
+  // Pick types for this level
+  const types = cfg.types;
+  const emojis = ALL_EMOJIS.slice(0, types);
+  let tiles = [];
+  emojis.forEach((emoji, idx) => {
+    tiles.push(idx + 1); // type ID = index+1
+    tiles.push(idx + 1);
+  });
+
+  // Shuffle tiles
+  for (let i = tiles.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+  }
+
+  // Place tiles
+  let ti = 0;
+  for (let r = 1; r <= displayRows; r++) {
+    for (let c = 1; c <= displayCols; c++) {
+      grid[r][c] = tiles[ti++];
+    }
+  }
+
+  // Reset game state
+  score = 0;
+  comboCount = 0;
+  hintsLeft = 3;
+  shufflesLeft = 2;
+  timeLeft = cfg.time;
+  selected = null;
+  hintPair = null;
+  matchLine = null;
+  animating = false;
+
+  updateUI();
+  startTimer();
+  draw();
+
+  // Show level start modal
+  showModal(`🍩 ${cfg.name}`, "准备好了吗？找相同、连起来！", "开始", () => {});
+}
+
+// ── Timer ──
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    elTimer.textContent = timeLeft;
+    if (timeLeft <= 10) {
+      elTimer.classList.add("urgent");
+      // tick sound
+    }
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      endLevel(false);
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  elTimer.classList.remove("urgent");
+}
+
+// ── Path finding ──
+function isLineClear(r1, c1, r2, c2) {
+  // same row
+  if (r1 === r2) {
+    const minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
+    for (let c = minC + 1; c < maxC; c++) {
+      if (grid[r1][c] !== 0) return false;
+    }
+    return true;
+  }
+  // same col
+  if (c1 === c2) {
+    const minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
+    for (let r = minR + 1; r < maxR; r++) {
+      if (grid[r][c1] !== 0) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+function findPath(r1, c1, r2, c2) {
+  if (r1 === r2 && c1 === c2) return null;
+  if (grid[r1][c1] !== grid[r2][c2]) return null;
+  if (grid[r1][c1] === 0 || grid[r2][c2] === 0) return null;
+
+  // 0 turns: direct line
+  if ((r1 === r2 || c1 === c2) && isLineClear(r1, c1, r2, c2)) {
+    return [{ r: r1, c: c1 }, { r: r2, c: c2 }];
+  }
+
+  // 1 turn: L-shape via (r1,c2) or (r2,c1)
+  if (grid[r1][c2] === 0 && isLineClear(r1, c1, r1, c2) && isLineClear(r1, c2, r2, c2)) {
+    return [{ r: r1, c: c1 }, { r: r1, c: c2 }, { r: r2, c: c2 }];
+  }
+  if (grid[r2][c1] === 0 && isLineClear(r1, c1, r2, c1) && isLineClear(r2, c1, r2, c2)) {
+    return [{ r: r1, c: c1 }, { r: r2, c: c1 }, { r: r2, c: c2 }];
+  }
+
+  // 2 turns: scan all rows
+  for (let r = 0; r < gridRows; r++) {
+    if (r === r1 && r === r2) continue;
+    if (grid[r][c1] === 0 && grid[r][c2] === 0 &&
+        isLineClear(r1, c1, r, c1) && isLineClear(r, c1, r, c2) && isLineClear(r, c2, r2, c2)) {
+      return [{ r: r1, c: c1 }, { r, c: c1 }, { r, c: c2 }, { r: r2, c: c2 }];
+    }
+  }
+  // scan all cols
+  for (let c = 0; c < gridCols; c++) {
+    if (c === c1 && c === c2) continue;
+    if (grid[r1][c] === 0 && grid[r2][c] === 0 &&
+        isLineClear(r1, c1, r1, c) && isLineClear(r1, c, r2, c) && isLineClear(r2, c, r2, c2)) {
+      return [{ r: r1, c: c1 }, { r: r1, c }, { r: r2, c }, { r: r2, c: c2 }];
+    }
+  }
+
+  return null;
+}
+
+function findAnyMatch() {
+  const tiles = [];
+  for (let r = 1; r <= displayRows; r++) {
+    for (let c = 1; c <= displayCols; c++) {
+      if (grid[r][c] !== 0) tiles.push({ r, c, type: grid[r][c] });
+    }
+  }
+  for (let i = 0; i < tiles.length; i++) {
+    for (let j = i + 1; j < tiles.length; j++) {
+      if (tiles[i].type !== tiles[j].type) continue;
+      const path = findPath(tiles[i].r, tiles[i].c, tiles[j].r, tiles[j].c);
+      if (path) return { a: tiles[i], b: tiles[j], path };
+    }
+  }
+  return null;
+}
+
+function hasAnyMatch() {
+  return findAnyMatch() !== null;
+}
+
+// ── Shuffle ──
+function shuffleTiles() {
+  const tiles = [];
+  for (let r = 1; r <= displayRows; r++) {
+    for (let c = 1; c <= displayCols; c++) {
+      if (grid[r][c] !== 0) tiles.push(grid[r][c]);
+    }
+  }
+  // Shuffle
+  for (let i = tiles.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+  }
+  // Place back
+  let ti = 0;
+  for (let r = 1; r <= displayRows; r++) {
+    for (let c = 1; c <= displayCols; c++) {
+      if (grid[r][c] !== 0) grid[r][c] = tiles[ti++];
+    }
+  }
+  selected = null;
+  hintPair = null;
+  // Ensure there's at least one match
+  if (!hasAnyMatch()) shuffleTiles();
+  draw();
+}
+
+// ── Matches remaining ──
+function countRemaining() {
+  let cnt = 0;
+  for (let r = 1; r <= displayRows; r++) {
+    for (let c = 1; c <= displayCols; c++) {
+      if (grid[r][c] !== 0) cnt++;
+    }
+  }
+  return cnt;
+}
+
+// ── Drawing ──
+function getEmoji(typeId) {
+  if (typeId < 1 || typeId > ALL_EMOJIS.length) return "?";
+  return ALL_EMOJIS[typeId - 1];
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background
+  ctx.fillStyle = "#fffafc";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Tiles
+  for (let r = 1; r <= displayRows; r++) {
+    for (let c = 1; c <= displayCols; c++) {
+      const v = grid[r][c];
+      if (v === 0) continue;
+      const x = (c - 1) * CELL;
+      const y = (r - 1) * CELL;
+      const pad = 3;
+
+      // Card background
+      const isSelected = selected && selected.r === r && selected.c === c;
+      const isHinted = hintPair && ((hintPair.r1 === r && hintPair.c1 === c) || (hintPair.r2 === r && hintPair.c2 === c));
+
+      ctx.save();
+      if (isSelected) {
+        ctx.shadowColor = "#ff69b4";
+        ctx.shadowBlur = 10;
+      }
+      if (isHinted) {
+        const t = Date.now() / 400;
+        const alpha = 0.5 + 0.5 * Math.sin(t * Math.PI);
+        ctx.shadowColor = `rgba(255, 165, 0, ${alpha})`;
+        ctx.shadowBlur = 12;
+      }
+
+      // Card rect
+      ctx.fillStyle = isSelected ? "#ffe4ec" : "#fff";
+      ctx.strokeStyle = isSelected ? "#ff69b4" : "#ffe4ec";
+      ctx.lineWidth = isSelected ? 2.5 : 1;
+      roundRect(ctx, x + pad, y + pad, CELL - pad * 2, CELL - pad * 2, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // Emoji
+      ctx.font = `${CELL * 0.55}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(getEmoji(v), x + CELL / 2, y + CELL / 2 + 1);
+    }
+  }
+
+  // Grid lines
+  ctx.strokeStyle = "#ffe4ec";
+  ctx.lineWidth = 0.5;
+  for (let r = 0; r <= displayRows; r++) {
+    ctx.beginPath();
+    ctx.moveTo(0, r * CELL);
+    ctx.lineTo(displayCols * CELL, r * CELL);
+    ctx.stroke();
+  }
+  for (let c = 0; c <= displayCols; c++) {
+    ctx.beginPath();
+    ctx.moveTo(c * CELL, 0);
+    ctx.lineTo(c * CELL, displayRows * CELL);
+    ctx.stroke();
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawMatchLine(path) {
+  if (!path || path.length < 2) return;
+
+  ctx.save();
+  ctx.strokeStyle = "#ff69b4";
+  ctx.lineWidth = 3;
+  ctx.shadowColor = "rgba(255, 105, 180, 0.6)";
+  ctx.shadowBlur = 8;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.globalAlpha = 0.85;
+  ctx.setLineDash([8, 4]);
+
+  ctx.beginPath();
+  const firstPx = gridToPixel(path[0].r, path[0].c);
+  ctx.moveTo(firstPx.x, firstPx.y);
+  for (let i = 1; i < path.length; i++) {
+    const p = gridToPixel(path[i].r, path[i].c);
+    ctx.lineTo(p.x, p.y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function gridToPixel(r, c) {
+  // Map grid coords (including border) to pixel center of cell
+  const x = (c - 0.5) * CELL;
+  const y = (r - 0.5) * CELL;
+  return { x, y };
+}
+
+// ── Click handling ──
+canvas.addEventListener("click", (e) => {
+  if (animating) return;
+  resumeAudio();
+
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const c = Math.floor(mx / CELL) + 1;
+  const r = Math.floor(my / CELL) + 1;
+
+  if (r < 1 || r > displayRows || c < 1 || c > displayCols) return;
+  if (grid[r][c] === 0) return;
+
+  playClick();
+
+  if (!selected) {
+    selected = { r, c };
+    hintPair = null;
+    draw();
+    return;
+  }
+
+  if (selected.r === r && selected.c === c) {
+    selected = null;
+    draw();
+    return;
+  }
+
+  // Try match
+  const path = findPath(selected.r, selected.c, r, c);
+  if (path) {
+    // Match found!
+    animating = true;
+    matchLine = path;
+
+    // Draw match line
+    const drawFrame = () => {
+      draw();
+      drawMatchLine(matchLine);
+    };
+    drawFrame();
+
+    // After animation, remove tiles
+    setTimeout(() => {
+      const removed = grid[selected.r][selected.c];
+      grid[selected.r][selected.c] = 0;
+      grid[r][c] = 0;
+      matchLine = null;
+
+      // Combo
+      if (comboTimer) clearTimeout(comboTimer);
+      comboCount++;
+      const bonusPoints = 100 * Math.min(comboCount, 10);
+      score += bonusPoints;
+      playMatch();
+
+      if (comboCount >= 2) {
+        playCombo(comboCount);
+        showComboPop(comboCount);
+      }
+
+      elCombo.textContent = `🔥 连击 ×${comboCount}`;
+      elCombo.classList.add("active");
+      comboTimer = setTimeout(() => {
+        comboCount = 0;
+        elCombo.classList.remove("active");
+      }, 3000);
+
+      updateUI();
+      selected = null;
+      hintPair = null;
+      animating = false;
+      draw();
+
+      // Check win
+      if (countRemaining() === 0) {
+        stopTimer();
+        const timeBonus = timeLeft * 5;
+        score += timeBonus;
+        setHighScore("linkmatch", score);
+        updateUI();
+        setTimeout(() => {
+          if (currentLevel < LEVELS.length - 1) {
+            showModal("🎉 过关啦！", `获得 ${score} 分 (+${timeBonus} 时间奖励)\n准备进入下一关！`, "下一关", () => {
+              initLevel(currentLevel + 1);
+            });
+          } else {
+            showModal("🏆 全部通关！", `最终得分: ${score} 分\n你征服了甜品屋！`, "再来一次", () => {
+              initLevel(0);
+            });
+          }
+        }, 400);
+        return;
+      }
+
+      // Check deadlock
+      if (!hasAnyMatch()) {
+        setTimeout(() => {
+          if (shufflesLeft > 0) {
+            doShuffle();
+          } else {
+            showModal("😢 没有可消除的了", "洗牌次数已用完，游戏结束", "重新开始", () => initLevel(currentLevel));
+          }
+        }, 300);
+      }
+    }, 200);
+  } else {
+    // No match
+    playFail();
+    selected = { r, c };
+    hintPair = null;
+    draw();
+  }
+});
+
+// ── Hint ──
+elHint.addEventListener("click", () => {
+  if (hintsLeft <= 0 || animating) return;
+  const match = findAnyMatch();
+  if (!match) return;
+  hintsLeft--;
+  elHintCount.textContent = hintsLeft;
+  if (hintsLeft === 0) elHint.disabled = true;
+
+  hintPair = { r1: match.a.r, c1: match.a.c, r2: match.b.r, c2: match.b.c };
+  selected = null;
+  draw();
+
+  setTimeout(() => {
+    hintPair = null;
+    draw();
+  }, 2000);
+});
+
+// ── Shuffle ──
+function doShuffle() {
+  if (shufflesLeft <= 0 || animating) return;
+  shufflesLeft--;
+  elShuffleCount.textContent = shufflesLeft;
+  if (shufflesLeft === 0) elShuffle.disabled = true;
+  shuffleTiles();
+}
+
+elShuffle.addEventListener("click", doShuffle);
+
+// ── UI helpers ──
+function updateUI() {
+  elLevel.textContent = currentLevel + 1;
+  elScore.textContent = score;
+  elTimer.textContent = timeLeft;
+  elHintCount.textContent = hintsLeft;
+  elShuffleCount.textContent = shufflesLeft;
+  if (hintsLeft === 0) elHint.disabled = true;
+  if (shufflesLeft === 0) elShuffle.disabled = true;
+}
+
+function showComboPop(count) {
+  const el = document.createElement("div");
+  el.className = "combo-pop";
+  el.textContent = `×${count}!`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+function showModal(title, msg, btnText, onConfirm) {
+  stopTimer();
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="emoji-big">${title.slice(0,2)}</div>
+      <h2>${title}</h2>
+      <p style="white-space:pre-line">${msg}</p>
+      <button class="btn btn-primary" id="modalBtn">${btnText}</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector("#modalBtn").addEventListener("click", () => {
+    overlay.remove();
+    onConfirm();
+    if (timerInterval) return; // new level started
+    // If game continues (e.g. first modal), restart timer
+    if (countRemaining() > 0 && timeLeft > 0) startTimer();
+    draw();
+  });
+
+  // Prevent clicking through
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+      onConfirm();
+      if (countRemaining() > 0 && timeLeft > 0) startTimer();
+    }
+  });
+}
+
+function endLevel(won) {
+  stopTimer();
+  if (!won) {
+    showModal("⏰ 时间到！", `得分: ${score} 分\n下次加油哦～`, "再来一次", () => initLevel(currentLevel));
+  }
+}
+
+// ── Window resize ──
+window.addEventListener("resize", () => {
+  const cfg = LEVELS[currentLevel];
+  CELL = Math.min(52, Math.floor((Math.min(window.innerWidth - 60, 750)) / displayCols));
+  canvas.width = displayCols * CELL + 1;
+  canvas.height = displayRows * CELL + 1;
+  draw();
+});
+
+// ── Start ──
+initLevel(0);
+</script>
+</body>
+</html>

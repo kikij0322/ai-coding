@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🍰 甜品屋小游戏合集</title>
+<link rel="icon" href="/favicon.svg" />
+<link rel="stylesheet" href="/src/styles/shared.css" />
+<style>
+  /* ===== 大厅专属样式 ===== */
+
+  /* 漂浮装饰 */
+  .decorations {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .deco {
+    position: absolute;
+    font-size: 28px;
+    opacity: 0.18;
+    animation: float-slow 6s ease-in-out infinite;
+  }
+  .deco:nth-child(1) { top: 8%; left: 5%; animation-delay: 0s; font-size: 32px; }
+  .deco:nth-child(2) { top: 15%; right: 8%; animation-delay: 1s; font-size: 22px; }
+  .deco:nth-child(3) { top: 40%; left: 3%; animation-delay: 2s; font-size: 26px; }
+  .deco:nth-child(4) { top: 60%; right: 6%; animation-delay: 0.5s; font-size: 30px; }
+  .deco:nth-child(5) { top: 75%; left: 8%; animation-delay: 1.5s; font-size: 24px; }
+  .deco:nth-child(6) { top: 85%; right: 10%; animation-delay: 3s; font-size: 34px; }
+  .deco:nth-child(7) { top: 25%; left: 50%; animation-delay: 4s; font-size: 20px; }
+  .deco:nth-child(8) { top: 10%; left: 85%; animation-delay: 2.5s; font-size: 28px; }
+
+  /* 主内容区 */
+  .hall {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 24px 60px;
+  }
+
+  .hall-header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .hall-header h1 {
+    font-family: var(--font-display);
+    font-size: 38px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .hall-header .subtitle {
+    font-family: var(--font-display);
+    font-size: 16px;
+    color: var(--text-light);
+    font-weight: 500;
+  }
+
+  /* 卡片网格 */
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 24px;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  .game-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 20px 24px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--white);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+    overflow: hidden;
+  }
+  .game-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--pink-light) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .game-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lg);
+  }
+  .game-card:hover::before {
+    opacity: 1;
+  }
+  .game-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .game-icon {
+    font-size: 52px;
+    margin-bottom: 14px;
+    transition: transform 0.35s ease;
+  }
+  .game-card:hover .game-icon {
+    transform: scale(1.12) rotate(-3deg);
+  }
+
+  .game-name {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .game-desc {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .game-score {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pink-deep);
+    background: var(--pink-light);
+    padding: 4px 12px;
+    border-radius: var(--radius-xl);
+  }
+
+  /* 底部 */
+  .hall-footer {
+    margin-top: 48px;
+    font-size: 13px;
+    color: var(--text-light);
+    font-family: var(--font-display);
+    text-align: center;
+  }
+
+  @media (max-width: 600px) {
+    .games-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    .hall-header h1 { font-size: 28px; }
+    .game-icon { font-size: 40px; }
+    .game-card { padding: 20px 12px 18px; }
+  }
+</style>
+</head>
+<body>
+  <!-- 漂浮装饰 -->
+  <div class="decorations">
+    <span class="deco">🍬</span><span class="deco">⭐</span><span class="deco">♡</span>
+    <span class="deco">🍭</span><span class="deco">🧁</span><span class="deco">✨</span>
+    <span class="deco">🍩</span><span class="deco">☆</span>
+  </div>
+
+  <div class="hall">
+    <header class="hall-header">
+      <h1>🍰 甜品屋小游戏</h1>
+      <p class="subtitle">挑一款甜点，开始玩吧～</p>
+    </header>
+
+    <div class="games-grid" id="gamesGrid">
+      <!-- 由 JS 动态渲染 -->
+    </div>
+
+    <footer class="hall-footer">♡ 愿你玩得开心 ♡</footer>
+  </div>
+
+  <script type="module">
+    import { getHighScore } from "/src/js/storage.js";
+
+    const games = [
+      {
+        id: "snake",
+        icon: "🍬",
+        name: "糖果贪吃蛇",
+        desc: "吃掉所有糖果，越长越长！",
+        href: "snake.html",
+      },
+      {
+        id: "link-match",
+        icon: "🍩",
+        name: "甜甜圈连连看",
+        desc: "找出相同的甜点，连线消除！",
+        href: "link-match.html",
+      },
+      {
+        id: "minesweeper",
+        icon: "🍫",
+        name: "巧克力扫雷",
+        desc: "小心避开藏起来的巧克力炸弹！",
+        href: "minesweeper.html",
+      },
+      {
+        id: "2048",
+        icon: "🍦",
+        name: "冰淇淋 2048",
+        desc: "合并数字，冲向 2048！",
+        href: "2048.html",
+      },
+      {
+        id: "tetris",
+        icon: "🍮",
+        name: "布丁方块",
+        desc: "经典俄罗斯方块，消行得分！",
+        href: "tetris.html",
+      },
+    ];
+
+    const grid = document.getElementById("gamesGrid");
+
+    games.forEach((g) => {
+      const score = getHighScore(g.id);
+      const card = document.createElement("a");
+      card.className = "game-card";
+      card.href = g.href;
+      card.innerHTML = `
+        <span class="game-icon">${g.icon}</span>
+        <span class="game-name">${g.name}</span>
+        <span class="game-desc">${g.desc}</span>
+        <span class="game-score">🏆 ${score > 0 ? score + " 分" : "来挑战吧"}</span>
+      `;
+      grid.appendChild(card);
+    });
+  </script>
+</body>
+</html>

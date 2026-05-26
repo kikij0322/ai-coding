@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拼豆图纸生成器 - Pixel Bead Pattern</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 16px 24px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header .sub { color: #8899aa; font-size: 13px; }
+  main { display: flex; flex: 1; gap: 0; }
+  .sidebar {
+    width: 280px;
+    background: #16213e;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    border-right: 1px solid #0f3460;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .canvas-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow: auto;
+    background:
+      repeating-conic-gradient(#2a2a3e 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+  }
+  .canvas-area canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    border-radius: 4px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  }
+  .upload-zone {
+    border: 2px dashed #0f3460;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #1a1a2e;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: #e94560;
+    background: #1e1e36;
+  }
+  .upload-zone p { color: #8899aa; font-size: 13px; margin-top: 8px; }
+  .upload-zone .icon { font-size: 32px; }
+  label.ctrl {
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 12px; color: #8899aa; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  label.ctrl input[type=range] { accent-color: #e94560; }
+  label.ctrl input[type=number], label.ctrl select {
+    background: #1a1a2e; border: 1px solid #0f3460; color: #e0e0e0;
+    padding: 6px 8px; border-radius: 4px; font-size: 13px; width: 100%;
+  }
+  .btn-row { display: flex; gap: 8px; }
+  button, .btn {
+    padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 500; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: #e94560; color: #fff; flex: 1; justify-content: center; }
+  .btn-primary:hover { background: #d63850; }
+  .btn-ghost { background: transparent; color: #8899aa; border: 1px solid #0f3460; }
+  .btn-ghost:hover { background: #1a1a2e; color: #fff; }
+  .btn-small { padding: 4px 10px; font-size: 11px; }
+  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .preset-row button { flex: 1; min-width: 48px; }
+  .palette { margin-top: 8px; }
+  .palette h3 { font-size: 12px; color: #8899aa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .palette-list { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; }
+  .palette-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .palette-swatch {
+    width: 18px; height: 18px; border-radius: 3px; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .palette-name { flex: 1; color: #ccc; } .palette-code { color: #e94560; font-weight: 600; margin-right: 2px; font-variant-numeric: tabular-nums; }
+  .palette-count { color: #8899aa; font-variant-numeric: tabular-nums; }
+  .stat-row { display: flex; justify-content: space-between; font-size: 12px; color: #8899aa; }
+  .stat-row span:last-child { color: #e0e0e0; font-weight: 500; }
+  .divider { border-top: 1px solid #0f3460; margin: 4px 0; }
+  #fileInput { display: none; }
+  .unsupported { display: none; text-align: center; padding: 40px; color: #8899aa; }
+  .empty-state { text-align: center; color: #556; }
+  .empty-state .big-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.4; }
+  .empty-state p { font-size: 14px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎨 拼豆图纸生成器</h1>
+  <span class="sub">上传图片 → 像素化 → Artkal 色板匹配 → 导出图纸</span>
+</header>
+<main>
+  <aside class="sidebar">
+    <div class="upload-zone" id="dropZone">
+      <div class="icon">🖼️</div>
+      <p>拖放图片到此处<br>或点击选择文件</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+
+    <div class="divider"></div>
+
+    <label class="ctrl">画板尺寸
+      <select id="boardPreset">
+        <option value="custom">自定义</option>
+        <option value="29">29×29 小方板</option>
+        <option value="50" selected>50×50 大方板</option>
+        <option value="64">64×64</option>
+        <option value="80">80×80</option>
+        <option value="100">100×100</option>
+      </select>
+    </label>
+
+    <label class="ctrl">宽度（豆子数）
+      <input type="range" id="widthSlider" min="8" max="120" value="50">
+      <input type="number" id="widthInput" min="8" max="120" value="50">
+    </label>
+
+    <label class="ctrl">高度（豆子数）
+      <input type="range" id="heightSlider" min="8" max="120" value="50">
+      <input type="number" id="heightInput" min="8" max="120" value="50">
+    </label>
+
+    <div class="btn-row">
+      <button id="gridToggle" class="btn-ghost btn-small">▦ 网格开</button>
+      <button id="outlineToggle" class="btn-ghost btn-small">⬛ 黑框</button>
+      <button id="codeToggle" class="btn-ghost btn-small">S# 色号</button>
+    </div>
+    <div class="divider"></div>
+    <label class="ctrl">缩放
+      <div class="btn-row" style="align-items:center;">
+        <button id="zoomOutBtn" class="btn-ghost btn-small" style="flex:0 0 32px;padding:4px 0;">−</button>
+        <span id="zoomLabel" style="flex:1;text-align:center;font-size:13px;color:#e0e0e0;">100%</span>
+        <button id="zoomInBtn" class="btn-ghost btn-small" style="flex:0 0 32px;padding:4px 0;">+</button>
+        <button id="zoomFitBtn" class="btn-ghost btn-small" style="flex:0 0 auto;padding:4px 8px;">适配</button>
+      </div>
+    </label>    <div class="divider"></div>    <button id="downloadBtn" class="btn-primary hidden" disabled>📥 下载图纸 (PNG)</button>
+
+    <div class="divider hidden" id="statsDivider"></div>
+    <div class="stat-row hidden" id="statTotal"><span>总豆子数</span><span id="totalBeads">-</span></div>
+    <div class="stat-row hidden" id="statColors"><span>使用颜色</span><span id="usedColors">-</span></div>
+
+    <div class="palette hidden" id="paletteSection">
+      <h3>颜色清单</h3>
+      <div class="palette-list" id="paletteList"></div>
+    </div>
+  </aside>
+  <section class="canvas-area" id="canvasArea">
+    <div class="empty-state" id="emptyState">
+      <div class="big-icon">🧩</div>
+      <p>上传一张图片开始制作拼豆图纸</p>
+    </div>
+    <canvas id="outputCanvas" class="hidden"></canvas>
+  </section>
+</main>
+
+<script>
+// ── Artkal Bead Color Palette (trimmed: fewer greys, no near-duplicates) ──
+// S: 柔光 Solid | T: 透明 Translucent | G: 闪粉 Glitter | M: 哑光 Matte | N: 荧光 Neon
+const BEAD_PALETTE = [
+  // S series - 柔光 Solid (core set, greys limited to 3)
+  { name: 'S01 白色',       code: 'S01', hex: '#FFFFFF' },
+  { name: 'S02 黑色',       code: 'S02', hex: '#1A1A1A' },
+  { name: 'S03 红色',       code: 'S03', hex: '#DC2626' },
+  { name: 'S04 橙色',       code: 'S04', hex: '#F97316' },
+  { name: 'S05 黄色',       code: 'S05', hex: '#FACC15' },
+  { name: 'S06 绿色',       code: 'S06', hex: '#22C55E' },
+  { name: 'S07 深绿',       code: 'S07', hex: '#166534' },
+  { name: 'S08 蓝色',       code: 'S08', hex: '#3B82F6' },
+  { name: 'S09 深蓝',       code: 'S09', hex: '#1E3A8A' },
+  { name: 'S10 紫色',       code: 'S10', hex: '#7C3AED' },
+  { name: 'S11 粉色',       code: 'S11', hex: '#EC4899' },
+  { name: 'S12 棕色',       code: 'S12', hex: '#92400E' },
+  { name: 'S13 灰色',       code: 'S13', hex: '#808080' },
+  { name: 'S14 浅灰',       code: 'S14', hex: '#B0B0B0' },
+  { name: 'S15 深灰',       code: 'S15', hex: '#4A4A4A' },
+  { name: 'S16 奶油',       code: 'S16', hex: '#FEF3C7' },
+  { name: 'S17 肉色',       code: 'S17', hex: '#FED7AA' },
+  { name: 'S18 浅粉',       code: 'S18', hex: '#FBCFE8' },
+  { name: 'S19 浅黄',       code: 'S19', hex: '#FEF9C3' },
+  { name: 'S20 浅绿',       code: 'S20', hex: '#BBF7D0' },
+  { name: 'S21 浅蓝',       code: 'S21', hex: '#BFDBFE' },
+  { name: 'S22 浅紫',       code: 'S22', hex: '#E9D5FF' },
+  { name: 'S23 浅棕',       code: 'S23', hex: '#D4A574' },
+  { name: 'S24 深棕',       code: 'S24', hex: '#78350F' },
+  { name: 'S25 莓红',       code: 'S25', hex: '#BE185D' },
+  { name: 'S26 蓝绿',       code: 'S26', hex: '#2DD4BF' },
+  { name: 'S27 品红',       code: 'S27', hex: '#C026D3' },
+  { name: 'S28 珊瑚',       code: 'S28', hex: '#FB7185' },
+  { name: 'S29 薄荷',       code: 'S29', hex: '#6EE7B7' },
+  { name: 'S30 天蓝',       code: 'S30', hex: '#7DD3FC' },
+  { name: 'S31 丁香',       code: 'S31', hex: '#D8B4FE' },
+  { name: 'S32 玫瑰',       code: 'S32', hex: '#FDA4AF' },
+  { name: 'S33 金色',       code: 'S33', hex: '#F59E0B' },
+  { name: 'S34 棕褐',       code: 'S34', hex: '#D6A77A' },
+  { name: 'S35 三文鱼',     code: 'S35', hex: '#FA8072' },
+  { name: 'S36 海蓝',       code: 'S36', hex: '#5EEAD4' },
+  { name: 'S37 柠檬',       code: 'S37', hex: '#FDE047' },
+  { name: 'S38 松绿',       code: 'S38', hex: '#15803D' },
+  { name: 'S39 牛仔蓝',     code: 'S39', hex: '#2563EB' },
+  { name: 'S40 梅紫',       code: 'S40', hex: '#6B21A8' },
+  { name: 'S41 肉桂',       code: 'S41', hex: '#A16207' },
+  { name: 'S43 象牙',       code: 'S43', hex: '#FEFDF5' },
+  { name: 'S44 石油蓝',     code: 'S44', hex: '#0D9488' },
+  { name: 'S45 青柠',       code: 'S45', hex: '#A3E635' },
+  { name: 'S46 蜂蜜',       code: 'S46', hex: '#FBBF24' },
+  { name: 'S47 石榴红',     code: 'S47', hex: '#991B1B' },
+  { name: 'S48 三叶草',     code: 'S48', hex: '#059669' },
+  { name: 'S49 钴蓝',       code: 'S49', hex: '#1D4ED8' },
+  { name: 'S50 紫红',       code: 'S50', hex: '#D946EF' },
+  { name: 'S51 黄油',       code: 'S51', hex: '#FFF1A0' },
+  { name: 'S52 鼠尾草',     code: 'S52', hex: '#84CC16' },
+  { name: 'S53 海军蓝',     code: 'S53', hex: '#1E3A5F' },
+  { name: 'S54 栗色',       code: 'S54', hex: '#854D0E' },
+  { name: 'S55 鸭绿',       code: 'S55', hex: '#0F766E' },
+  { name: 'S56 琥珀',       code: 'S56', hex: '#EA580C' },
+  { name: 'S57 桑葚',       code: 'S57', hex: '#9D174D' },
+  { name: 'S58 万寿菊',     code: 'S58', hex: '#EAB308' },
+  { name: 'S59 海沫',       code: 'S59', hex: '#99F6E4' },
+  { name: 'S60 茄紫',       code: 'S60', hex: '#581C87' },
+  { name: 'S61 焦糖',       code: 'S61', hex: '#B45309' },
+  { name: 'S62 蓟花紫',     code: 'S62', hex: '#E0B0FF' },
+  { name: 'S63 橄榄',       code: 'S63', hex: '#4D7C0F' },
+  { name: 'S65 杏色',       code: 'S65', hex: '#FDBA74' },
+  { name: 'S66 靛蓝',       code: 'S66', hex: '#312E81' },
+  { name: 'S67 沙色',       code: 'S67', hex: '#E7D8B0' },
+  { name: 'S68 酒红',       code: 'S68', hex: '#881337' },
+  { name: 'S69 苔绿',       code: 'S69', hex: '#65A30D' },
+  { name: 'S70 长春花蓝',   code: 'S70', hex: '#A5B4FC' },
+  // T series - 透明 Translucent
+  { name: 'T01 透明',       code: 'T01', hex: '#F0F0E8' },
+  { name: 'T02 透明红',     code: 'T02', hex: '#FCA5A5' },
+  { name: 'T03 透明橙',     code: 'T03', hex: '#FDBA74' },
+  { name: 'T04 透明黄',     code: 'T04', hex: '#FDE68A' },
+  { name: 'T05 透明绿',     code: 'T05', hex: '#86EFAC' },
+  { name: 'T06 透明蓝',     code: 'T06', hex: '#93C5FD' },
+  { name: 'T07 透明紫',     code: 'T07', hex: '#C4B5FD' },
+  { name: 'T08 透明粉',     code: 'T08', hex: '#FDA4AF' },
+  { name: 'T09 透明棕',     code: 'T09', hex: '#D4A574' },
+  { name: 'T11 透明深蓝',   code: 'T11', hex: '#5B8DEF' },
+  { name: 'T12 透明蓝绿',   code: 'T12', hex: '#5EEAD4' },
+  { name: 'T13 透明品红',   code: 'T13', hex: '#E879F9' },
+  { name: 'T14 透明青柠',   code: 'T14', hex: '#BEF264' },
+  // G series - 闪粉 Glitter (no grey/silver, no near-dupe white/black)
+  { name: 'G03 闪粉红',     code: 'G03', hex: '#E74C3C' },
+  { name: 'G04 闪粉橙',     code: 'G04', hex: '#F97316' },
+  { name: 'G05 闪粉黄',     code: 'G05', hex: '#FACC15' },
+  { name: 'G06 闪粉绿',     code: 'G06', hex: '#27AE60' },
+  { name: 'G07 闪粉蓝',     code: 'G07', hex: '#3498DB' },
+  { name: 'G08 闪粉紫',     code: 'G08', hex: '#8E44AD' },
+  { name: 'G09 闪粉粉',     code: 'G09', hex: '#E91E90' },
+  { name: 'G11 闪粉金',     code: 'G11', hex: '#D4A017' },
+  { name: 'G12 闪粉蓝绿',   code: 'G12', hex: '#1ABC9C' },
+  { name: 'G13 闪粉棕',     code: 'G13', hex: '#A04000' },
+  { name: 'G14 闪粉深蓝',   code: 'G14', hex: '#2C3E80' },
+  { name: 'G15 闪粉深绿',   code: 'G15', hex: '#1B7A3D' },
+  // M series - 哑光 Matte (no grey, no near-dupe white/black)
+  { name: 'M03 哑光红',     code: 'M03', hex: '#E57373' },
+  { name: 'M04 哑光橙',     code: 'M04', hex: '#FFB74D' },
+  { name: 'M05 哑光黄',     code: 'M05', hex: '#FFF176' },
+  { name: 'M06 哑光绿',     code: 'M06', hex: '#81C784' },
+  { name: 'M07 哑光蓝',     code: 'M07', hex: '#64B5F6' },
+  { name: 'M08 哑光紫',     code: 'M08', hex: '#BA68C8' },
+  { name: 'M09 哑光粉',     code: 'M09', hex: '#F06292' },
+  { name: 'M10 哑光棕',     code: 'M10', hex: '#A1887F' },
+  { name: 'M12 哑光深蓝',   code: 'M12', hex: '#5C6BC0' },
+  { name: 'M13 哑光深绿',   code: 'M13', hex: '#66BB6A' },
+  { name: 'M14 哑光肉色',   code: 'M14', hex: '#FFCC80' },
+  { name: 'M15 哑光薰衣草', code: 'M15', hex: '#CE93D8' },
+  // N series - 荧光 Neon
+  { name: 'N01 荧光红',     code: 'N01', hex: '#FF4444' },
+  { name: 'N02 荧光橙',     code: 'N02', hex: '#FF8C00' },
+  { name: 'N03 荧光黄',     code: 'N03', hex: '#FFEE00' },
+  { name: 'N04 荧光绿',     code: 'N04', hex: '#39FF14' },
+  { name: 'N05 荧光蓝',     code: 'N05', hex: '#00BFFF' },
+  { name: 'N06 荧光紫',     code: 'N06', hex: '#BF5FFF' },
+  { name: 'N07 荧光粉',     code: 'N07', hex: '#FF69B4' },
+  { name: 'N08 荧光珊瑚',   code: 'N08', hex: '#FF6B6B' },
+];
+
+// Parse hex to RGB
+function hexToRgb(h) {
+  return [
+    parseInt(h.slice(1,3), 16),
+    parseInt(h.slice(3,5), 16),
+    parseInt(h.slice(5,7), 16)
+  ];
+}
+const BEAD_RGB = BEAD_PALETTE.map(b => ({ ...b, rgb: hexToRgb(b.hex) }));
+
+// Find nearest bead color
+function nearestBead(r, g, b, alpha) {
+  if (alpha < 128) {
+    // Transparent → treat as white/clear
+    return BEAD_RGB.find(b => b.code === 'T01');
+  }
+  let minDist = Infinity, best = BEAD_RGB[0];
+  for (const bead of BEAD_RGB) {
+    const dr = r - bead.rgb[0], dg = g - bead.rgb[1], db = b - bead.rgb[2];
+    // Weighted distance (human perception)
+    const dist = 2*dr*dr + 4*dg*dg + 3*db*db;
+    if (dist < minDist) { minDist = dist; best = bead; }
+  }
+  return best;
+}
+
+// ── State ──────────────────────────────────────────────────
+let sourceImage = null;
+let showGrid = true;
+let showOutline = false;
+let showCodes = true;
+let zoomLevel = 1.0;
+
+// ── DOM refs ───────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const widthSlider = document.getElementById('widthSlider');
+const widthInput = document.getElementById('widthInput');
+const heightSlider = document.getElementById('heightSlider');
+const heightInput = document.getElementById('heightInput');
+const boardPreset = document.getElementById('boardPreset');
+const gridToggle = document.getElementById('gridToggle');
+const outlineToggle = document.getElementById('outlineToggle');
+const codeToggle = document.getElementById('codeToggle');
+const zoomInBtn = document.getElementById('zoomInBtn');
+const zoomOutBtn = document.getElementById('zoomOutBtn');
+const zoomFitBtn = document.getElementById('zoomFitBtn');
+const zoomLabel = document.getElementById('zoomLabel');
+const downloadBtn = document.getElementById('downloadBtn');
+const outputCanvas = document.getElementById('outputCanvas');
+const emptyState = document.getElementById('emptyState');
+const canvasArea = document.getElementById('canvasArea');
+
+// ── Upload ─────────────────────────────────────────────────
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) loadImage(e.target.files[0]);
+});
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) loadImage(e.dataTransfer.files[0]);
+});
+
+function loadImage(file) {
+  if (!file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      // Auto-set dimensions to maintain aspect ratio
+      const ar = img.width / img.height;
+      const curW = parseInt(widthInput.value) || 50;
+      let newW = curW, newH = Math.round(curW / ar);
+      if (newH < 8) { newH = 8; newW = Math.round(newH * ar); }
+      if (newH > 120) { newH = 120; newW = Math.round(newH * ar); }
+      if (newW > 120) { newW = 120; newH = Math.round(newW / ar); }
+      widthSlider.value = newW; widthInput.value = newW;
+      heightSlider.value = newH; heightInput.value = newH;
+      boardPreset.value = 'custom';
+      render();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Sync controls ──────────────────────────────────────────
+function syncWidth(v) { widthSlider.value = v; widthInput.value = v; boardPreset.value = 'custom'; render(); }
+function syncHeight(v) { heightSlider.value = v; heightInput.value = v; boardPreset.value = 'custom'; render(); }
+widthSlider.addEventListener('input', () => syncWidth(widthSlider.value));
+widthInput.addEventListener('change', () => { let v = Math.min(120, Math.max(8, parseInt(widthInput.value)||50)); syncWidth(v); });
+heightSlider.addEventListener('input', () => syncHeight(heightSlider.value));
+heightInput.addEventListener('change', () => { let v = Math.min(120, Math.max(8, parseInt(heightInput.value)||50)); syncHeight(v); });
+
+boardPreset.addEventListener('change', () => {
+  const v = boardPreset.value;
+  if (v === 'custom') return;
+  const n = parseInt(v);
+  widthSlider.value = n; widthInput.value = n;
+  heightSlider.value = n; heightInput.value = n;
+  render();
+});
+
+gridToggle.addEventListener('click', () => {
+  showGrid = !showGrid;
+  gridToggle.textContent = showGrid ? '▦ 网格开' : '▦ 网格关';
+  render();
+});
+
+outlineToggle.addEventListener('click', () => {
+  showOutline = !showOutline;
+  outlineToggle.textContent = showOutline ? '⬛ 黑框' : '⬜ 无框';
+  render();
+}
+
+codeToggle.addEventListener('click', () => {
+  showCodes = !showCodes;
+  codeToggle.textContent = showCodes ? 'S# 色号' : 'S# 隐藏';
+  render();
+});
+zoomInBtn.addEventListener('click', () => {
+  zoomLevel = Math.min(5, zoomLevel + 0.25);
+  updateZoomUI();
+  render();
+});
+zoomOutBtn.addEventListener('click', () => {
+  zoomLevel = Math.max(0.25, zoomLevel - 0.25);
+  updateZoomUI();
+  render();
+});
+zoomFitBtn.addEventListener('click', () => {
+  zoomLevel = 1.0;
+  updateZoomUI();
+  render();
+});
+function updateZoomUI() {
+  zoomLabel.textContent = Math.round(zoomLevel * 100) + '%';
+}
+
+downloadBtn.addEventListener('click', () => {
+  if (!sourceImage || outputCanvas.classList.contains('hidden')) return;
+  // Render at 20px per bead for download
+  const pw = parseInt(widthInput.value) || 50;
+  const ph = parseInt(heightInput.value) || 50;
+  const cellSize = 20;
+  const tmp = document.createElement('canvas');
+  tmp.width = pw * cellSize;
+  tmp.height = ph * cellSize;
+  const ctx = tmp.getContext('2d');
+  drawPattern(ctx, pw, ph, cellSize, true);
+  const a = document.createElement('a');
+  a.download = 'bead-pattern.png';
+  a.href = tmp.toDataURL('image/png');
+  a.click();
+});
+
+// ── Posterize: quantize RGB channels to fewer levels ──────
+function posterize(r, g, b, levels) {
+  const step = 256 / levels;
+  return [
+    Math.floor(r / step) * step + step / 2,
+    Math.floor(g / step) * step + step / 2,
+    Math.floor(b / step) * step + step / 2,
+  ];
+}
+
+// ── Render ─────────────────────────────────────────────────
+function drawPattern(ctx, pw, ph, cellSize, forDownload) {
+  // Step 1: Draw source image scaled to pixel grid
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = pw; offCanvas.height = ph;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.drawImage(sourceImage, 0, 0, pw, ph);
+  const imageData = offCtx.getImageData(0, 0, pw, ph);
+  const pixels = imageData.data;
+
+  // Step 2: Posterize + map each pixel to nearest bead color & count
+  const colorCounts = {};
+  const beadGrid = []; // 2D grid of bead assignments for outline drawing
+  for (let y = 0; y < ph; y++) {
+    beadGrid[y] = [];
+    for (let x = 0; x < pw; x++) {
+      const i = (y * pw + x) * 4;
+      let r = pixels[i], g = pixels[i+1], b = pixels[i+2], a = pixels[i+3];
+      // Posterize to merge similar shades
+      const [pr, pg, pb] = posterize(r, g, b, 6);
+      const bead = nearestBead(pr, pg, pb, a);
+      beadGrid[y][x] = bead;
+      const key = bead.name;
+      colorCounts[key] = (colorCounts[key] || 0) + 1;
+    }
+  }
+
+  // Step 3: Draw beads (flat, no shading)
+  for (let y = 0; y < ph; y++) {
+    for (let x = 0; x < pw; x++) {
+      const bead = beadGrid[y][x];
+      ctx.fillStyle = bead.hex;
+      ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+
+      // Color code label
+      if (showCodes && cellSize >= 16) {
+        const luminance = 0.299 * bead.rgb[0] + 0.587 * bead.rgb[1] + 0.114 * bead.rgb[2];
+        const textColor = luminance > 140 ? '#1a1a1a' : '#ffffff';
+        ctx.fillStyle = textColor;
+        ctx.font = `bold ${Math.max(8, cellSize * 0.38)}px -apple-system, "Segoe UI", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(bead.code, x * cellSize + cellSize/2, y * cellSize + cellSize/2);
+      }
+    }
+  }
+
+  // Step 3b: Black outline borders between color regions
+  if (showOutline && !forDownload && cellSize >= 6) {
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = Math.max(1, cellSize * 0.12);
+    for (let y = 0; y < ph; y++) {
+      for (let x = 0; x < pw; x++) {
+        const bead = beadGrid[y][x];
+        const bx = x * cellSize, by = y * cellSize;
+        // Right edge
+        if (x < pw - 1 && beadGrid[y][x+1].name !== bead.name) {
+          ctx.beginPath();
+          ctx.moveTo(bx + cellSize, by);
+          ctx.lineTo(bx + cellSize, by + cellSize);
+          ctx.stroke();
+        }
+        // Bottom edge
+        if (y < ph - 1 && beadGrid[y+1][x].name !== bead.name) {
+          ctx.beginPath();
+          ctx.moveTo(bx, by + cellSize);
+          ctx.lineTo(bx + cellSize, by + cellSize);
+          ctx.stroke();
+        }
+        // Left edge (only for first column or boundary)
+        if (x === 0 || (x > 0 && beadGrid[y][x-1].name !== bead.name)) {
+          ctx.beginPath();
+          ctx.moveTo(bx, by);
+          ctx.lineTo(bx, by + cellSize);
+          ctx.stroke();
+        }
+        // Top edge (only for first row or boundary)
+        if (y === 0 || (y > 0 && beadGrid[y-1][x].name !== bead.name)) {
+          ctx.beginPath();
+          ctx.moveTo(bx, by);
+          ctx.lineTo(bx + cellSize, by);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  // Step 4: Grid lines
+  if (showGrid) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x <= pw; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * cellSize, 0);
+      ctx.lineTo(x * cellSize, ph * cellSize);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= ph; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * cellSize);
+      ctx.lineTo(pw * cellSize, y * cellSize);
+      ctx.stroke();
+    }
+  }function render() {
+  if (!sourceImage) return;
+
+  const pw = parseInt(widthInput.value) || 50;
+  const ph = parseInt(heightInput.value) || 50;
+
+  // Calculate base cell size to fit viewport, then apply zoom
+  const maxW = canvasArea.clientWidth - 48;
+  const maxH = canvasArea.clientHeight - 48;
+  const baseCell = Math.max(8, Math.min(40, Math.floor(Math.min(maxW / pw, maxH / ph))));
+  const cellSize = Math.max(4, Math.round(baseCell * zoomLevel));
+
+  outputCanvas.width = pw * cellSize;
+  outputCanvas.height = ph * cellSize;
+  const ctx = outputCanvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  const colorCounts = drawPattern(ctx, pw, ph, cellSize, false);
+  updateStats(colorCounts, pw, ph);
+
+  emptyState.classList.add('hidden');
+  outputCanvas.classList.remove('hidden');
+  downloadBtn.classList.remove('hidden');
+  document.getElementById('statsDivider').classList.remove('hidden');
+  document.getElementById('statTotal').classList.remove('hidden');
+  document.getElementById('statColors').classList.remove('hidden');
+  document.getElementById('paletteSection').classList.remove('hidden');
+}
+
+function updateStats(colorCounts, pw, ph) {
+  const total = pw * ph;
+  document.getElementById('totalBeads').textContent = total;
+  const entries = Object.entries(colorCounts).sort((a,b) => b[1] - a[1]);
+  document.getElementById('usedColors').textContent = entries.length;
+
+  const list = document.getElementById('paletteList');
+  list.innerHTML = entries.map(([name, count]) => {
+    const bead = BEAD_PALETTE.find(b => b.name === name);
+    return `<div class="palette-item">
+      <div class="palette-swatch" style="background:${bead.hex}"></div>
+      <span class="palette-name"><span class="palette-code">${bead.code}</span> ${name.split(' ').slice(1).join(' ')}</span>
+      <span class="palette-count">${count}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Initial render if no image ─────────────────────────────
+// Load a small demo image? No, keep it clean.
+</script>
+</body>
+</html>
