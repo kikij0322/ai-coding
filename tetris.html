@@ -8,29 +8,30 @@
 <link rel="stylesheet" href="/src/styles/shared.css" />
 <style>
   body { display:flex; justify-content:center; align-items:center; min-height:100vh; min-height:100dvh; position:relative; padding:8px; }
-  .game-wrapper { display:flex; gap:14px; align-items:flex-start; z-index:1; }
+  .game-wrapper { display:flex; gap:12px; align-items:flex-start; z-index:1; }
   .main-area { display:flex; flex-direction:column; align-items:center; gap:8px; }
   .title { font-family:var(--font-display); font-size:clamp(18px,4vw,22px); font-weight:700; color:var(--text); }
   .canvas-frame { background:#fff; border-radius:var(--radius-lg); padding:6px; box-shadow:var(--shadow-lg),0 0 0 3px var(--pink); }
   canvas#board { display:block; border-radius:var(--radius-md); background:#faf5f2; }
-  .side-panel { display:flex; flex-direction:column; gap:10px; }
-  .info-box { text-align:center; background:rgba(255,255,255,0.8); backdrop-filter:blur(6px); padding:8px 12px; border-radius:var(--radius-md); border:2px solid var(--pink); box-shadow:var(--shadow-sm); }
+  .side-panel { display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .info-box { text-align:center; background:rgba(255,255,255,0.8); backdrop-filter:blur(6px); padding:6px 12px; border-radius:var(--radius-md); border:2px solid var(--pink); box-shadow:var(--shadow-sm); width:100%; }
   .info-box .label { font-size:10px; color:var(--text-light); font-weight:600; }
   .info-box .value { font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--pink-deep); }
   .next-frame { background:#fff; border-radius:var(--radius-md); padding:6px; border:2px solid var(--pink); box-shadow:var(--shadow-sm); display:flex; align-items:center; justify-content:center; }
   canvas#nextCanvas { display:block; }
   .bottom-bar { display:flex; gap:8px; }
-  /* Mobile touch controls */
-  .touch-controls { display:none; flex-direction:column; align-items:center; gap:4px; margin-top:4px; }
-  .touch-row { display:flex; gap:4px; }
-  .touch-btn { width:50px; height:50px; border-radius:12px; border:2px solid var(--pink); background:rgba(255,255,255,0.85); font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  .touch-controls { display:none; flex-direction:column; align-items:center; gap:3px; }
+  .touch-row { display:flex; gap:3px; }
+  .touch-btn { width:44px; height:44px; border-radius:12px; border:2px solid var(--pink); background:rgba(255,255,255,0.85); font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
   .touch-btn:active { background:var(--pink-light); }
-  .touch-btn.drop { width:110px; height:44px; font-family:var(--font-display); font-size:14px; font-weight:700; }
-  .touch-btn.rotate-btn { width:110px; height:44px; font-family:var(--font-display); font-size:14px; font-weight:700; }
+  .touch-btn.wide { width:96px; height:40px; font-family:var(--font-display); font-size:13px; font-weight:700; }
   @media (max-width:600px) {
-    .game-wrapper { flex-direction:column; align-items:center; gap:8px; }
-    .side-panel { flex-direction:row; flex-wrap:wrap; justify-content:center; gap:6px; }
+    .game-wrapper { gap:6px; }
     .touch-controls { display:flex; }
+    .side-panel .info-box { padding:4px 8px; }
+    .side-panel .info-box .value { font-size:15px; }
+    .side-panel .info-box .label { font-size:9px; }
+    .title { font-size:15px; }
   }
 </style>
 </head>
@@ -43,20 +44,6 @@
       <button class="btn btn-secondary" id="btnPause">⏸ 暂停</button>
       <button class="btn btn-primary" id="btnNew">🔄 新游戏</button>
     </div>
-    <!-- Mobile touch controls -->
-    <div class="touch-controls" id="touchControls">
-      <div class="touch-row">
-        <button class="touch-btn rotate-btn" id="btnRotate">🔄 旋转</button>
-      </div>
-      <div class="touch-row">
-        <button class="touch-btn" id="btnLeft">◀</button>
-        <button class="touch-btn drop" id="btnDrop">▼ 下落</button>
-        <button class="touch-btn" id="btnRight">▶</button>
-      </div>
-      <div class="touch-row">
-        <button class="touch-btn rotate-btn" id="btnHardDrop">⏬ 硬降</button>
-      </div>
-    </div>
   </div>
   <div class="side-panel">
     <div class="info-box"><div class="label">⭐ 分数</div><div class="value" id="scoreVal">0</div></div>
@@ -64,6 +51,15 @@
     <div class="info-box"><div class="label">📏 行数</div><div class="value" id="linesVal">0</div></div>
     <div class="info-box"><div class="label">🏆 最高</div><div class="value" id="bestVal">0</div></div>
     <div class="next-frame"><canvas id="nextCanvas" width="100" height="80"></canvas></div>
+    <div class="touch-controls" id="touchControls">
+      <div class="touch-row"><button class="touch-btn wide" id="btnRotate">🔄 旋转</button></div>
+      <div class="touch-row">
+        <button class="touch-btn" id="btnLeft">◀</button>
+        <button class="touch-btn wide" id="btnDrop">▼ 下落</button>
+        <button class="touch-btn" id="btnRight">▶</button>
+      </div>
+      <div class="touch-row"><button class="touch-btn wide" id="btnHardDrop">⏬ 硬降</button></div>
+    </div>
   </div>
 </div>
 <a href="index.html" class="back-btn">← 大厅</a>
@@ -89,7 +85,7 @@ const elPause=document.getElementById("btnPause"),elNew=document.getElementById(
 elBest.textContent=best;
 
 function resizeCanvas() {
-  CELL=Math.max(22, Math.min(30, Math.floor((Math.min(window.innerHeight-340,600))/ROWS)));
+  CELL=Math.max(22, Math.min(30, Math.floor((Math.min(window.innerHeight-260,600))/ROWS)));
   canvas.width=COLS*CELL; canvas.height=ROWS*CELL;
 }
 resizeCanvas();
@@ -114,8 +110,7 @@ function drawBoard() {
   ctx.fillStyle="#faf5f2";ctx.fillRect(0,0,canvas.width,canvas.height);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
     const x=c*CELL,y=r*CELL;
-    ctx.fillStyle=board[r][c]||"#f5ede8";
-    ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
+    ctx.fillStyle=board[r][c]||"#f5ede8";ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
     if(board[r][c]){ctx.fillStyle="rgba(255,255,255,0.25)";ctx.fillRect(x+2,y+2,CELL-4,2);ctx.fillRect(x+2,y+2,2,CELL-4)}
     ctx.strokeStyle="#e8ddd3";ctx.lineWidth=0.5;ctx.strokeRect(x,y,CELL,CELL);
   }
@@ -147,10 +142,10 @@ window.addEventListener("keydown",(e)=>{
   else if(e.key==="ArrowDown"||e.key==="s"){e.preventDefault();moveDown()}
   else if(e.key==="ArrowUp"||e.key==="w"){e.preventDefault();rotate()}
   else if(e.key===" "){e.preventDefault();hardDrop()}
-  else if(e.key==="p"||e.key==="P"||e.key==="Escape"){e.preventDefault();togglePause()}
+  else if(e.key==="p"||e.key==="P"){e.preventDefault();togglePause()}
 });
 
-// Touch controls
+// Touch buttons
 document.getElementById("btnLeft").addEventListener("click",moveLeft);
 document.getElementById("btnRight").addEventListener("click",moveRight);
 document.getElementById("btnRotate").addEventListener("click",rotate);
@@ -165,14 +160,11 @@ canvas.addEventListener("touchend",(e)=>{
   if(gameOver){init();ts=null;return}
   if(!ts)return;
   const dx=e.changedTouches[0].clientX-ts.x,dy=e.changedTouches[0].clientY-ts.y;
-  const adx=Math.abs(dx),ady=Math.abs(dy);
-  if(Math.max(adx,ady)<15){rotate();ts=null;return}
-  if(ady>adx&&dy>40){hardDrop()}else if(ady>adx){moveDown()}
-  else if(adx>ady){dx>0?moveRight():moveLeft()}
+  if(Math.max(Math.abs(dx),Math.abs(dy))<15){rotate();ts=null;return}
+  if(Math.abs(dy)>Math.abs(dx)&&dy>40){hardDrop()}else if(Math.abs(dy)>Math.abs(dx)){moveDown()}
+  else{dx>0?moveRight():moveLeft()}
   ts=null;
 },{passive:false});
-
-// Click to restart
 canvas.addEventListener("click",()=>{if(gameOver)init()});
 
 elPause.addEventListener("click",togglePause);

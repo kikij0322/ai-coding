@@ -56,7 +56,15 @@
     .game-wrapper { gap: 6px; }
     .canvas-frame { padding: 4px; }
   }
-</style>
+  .touch-dpad { display:none; margin-top:8px; }
+  .touch-dpad .dpad-row { display:flex; gap:6px; justify-content:center; }
+  .touch-dpad .dpad-btn { width:48px; height:48px; border-radius:14px; border:2px solid var(--pink); background:rgba(255,255,255,0.85); font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  .touch-dpad .dpad-btn:active { background:var(--pink-light); }
+  .touch-dpad .dpad-empty { width:48px; height:48px; }
+  @media (max-width:600px) {
+    .touch-dpad { display:block; }
+  }
+  </style>
 </head>
 <body>
 
@@ -317,6 +325,14 @@ import { getHighScore, setHighScore } from "/src/js/storage.js";
 
   window.addEventListener("resize",()=>{resizeCanvas();draw();});
 
+    // D-pad touch controls
+  document.getElementById("dpadUp").addEventListener("click",()=>{if(!paused)changeDir(0,-1)});
+  document.getElementById("dpadDown").addEventListener("click",()=>{if(!paused)changeDir(0,1)});
+  document.getElementById("dpadLeft").addEventListener("click",()=>{if(!paused)changeDir(-1,0)});
+  document.getElementById("dpadRight").addEventListener("click",()=>{if(!paused)changeDir(1,0)});
+  document.getElementById("dpadPause").addEventListener("click",()=>{
+    if(gameOver){startGame()}else{paused=!paused;if(paused){if(gameLoop)clearInterval(gameLoop);gameLoop=null}else{gameLoop=setInterval(step,speed)}draw();}
+  });
   best=getHighScore("snake");bestEl.textContent=best;
   init();draw();animate();
 })();
