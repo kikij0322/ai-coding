@@ -2,99 +2,31 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>🍫 巧克力扫雷</title>
 <link rel="icon" href="/favicon.svg" />
 <link rel="stylesheet" href="/src/styles/shared.css" />
 <style>
-  body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    position: relative;
-  }
-  .game-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    z-index: 1;
-    position: relative;
-  }
-
-  .title {
-    font-family: var(--font-display);
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text);
-  }
-
-  .top-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .info-box {
-    text-align: center;
-    background: rgba(255,255,255,0.8);
-    backdrop-filter: blur(6px);
-    padding: 8px 16px;
-    border-radius: var(--radius-md);
-    border: 2px solid var(--pink);
-    box-shadow: var(--shadow-sm);
-  }
-  .info-box .label { font-size: 11px; color: var(--text-light); font-weight: 600; }
-  .info-box .value { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: #8B5E3C; }
-
-  .diff-btns {
-    display: flex;
-    gap: 8px;
-  }
-  .diff-btn {
-    padding: 6px 14px;
-    font-family: var(--font-display);
-    font-size: 12px;
-    font-weight: 600;
-    border: 2px solid var(--mint);
-    background: var(--white);
-    color: var(--text);
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .diff-btn.active {
-    background: var(--mint-light);
-    border-color: #80cbc4;
-    color: #00695c;
-  }
-  .diff-btn:hover { background: var(--mint-light); }
-
-  .board-frame {
-    background: #fff;
-    border-radius: var(--radius-lg);
-    padding: 8px;
-    box-shadow: var(--shadow-lg), 0 0 0 3px var(--pink);
-  }
-  canvas { display: block; border-radius: var(--radius-md); background: #faf5f2; }
-
-  .num-1 { color: #5D9CEC; }
-  .num-2 { color: #4FC47F; }
-  .num-3 { color: #ED5565; }
-  .num-4 { color: #8067B7; }
-  .num-5 { color: #AC92EC; }
-  .num-6 { color: #48CFAD; }
-  .num-7 { color: #8B5E3C; }
-  .num-8 { color: #656D78; }
+  body { display:flex; justify-content:center; align-items:center; min-height:100vh; min-height:100dvh; position:relative; padding:8px; }
+  .game-wrapper { display:flex; flex-direction:column; align-items:center; gap:10px; z-index:1; width:100%; max-width:750px; }
+  .title { font-family:var(--font-display); font-size:clamp(18px,4vw,22px); font-weight:700; color:var(--text); }
+  .top-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .info-box { text-align:center; background:rgba(255,255,255,0.8); backdrop-filter:blur(6px); padding:6px 12px; border-radius:var(--radius-md); border:2px solid var(--pink); box-shadow:var(--shadow-sm); }
+  .info-box .label { font-size:10px; color:var(--text-light); font-weight:600; }
+  .info-box .value { font-family:var(--font-display); font-size:20px; font-weight:700; color:#8B5E3C; }
+  .diff-btns { display:flex; gap:6px; }
+  .diff-btn { padding:5px 10px; font-family:var(--font-display); font-size:11px; font-weight:600; border:2px solid var(--mint); background:var(--white); color:var(--text); border-radius:20px; cursor:pointer; transition:all 0.2s; }
+  .diff-btn.active { background:var(--mint-light); border-color:#80cbc4; color:#00695c; }
+  .board-frame { background:#fff; border-radius:var(--radius-lg); padding:6px; box-shadow:var(--shadow-lg),0 0 0 3px var(--pink); overflow:auto; max-width:100%; }
+  canvas { display:block; border-radius:var(--radius-md); background:#faf5f2; }
+  .flag-btn { padding:6px 14px; font-family:var(--font-display); font-size:13px; font-weight:600; border-radius:20px; cursor:pointer; transition:all 0.2s; border:2px solid var(--pink); }
+  .flag-btn.reveal-mode { background:var(--white); color:var(--text); }
+  .flag-btn.flag-mode { background:#ffe4ec; color:#e75480; border-color:#e75480; }
 </style>
 </head>
 <body>
-
 <div class="game-wrapper">
   <div class="title">🍫 巧克力扫雷</div>
-
   <div class="top-row">
     <div class="diff-btns">
       <button class="diff-btn" data-diff="0">简单 9×9</button>
@@ -102,308 +34,186 @@
       <button class="diff-btn" data-diff="2">困难 16×30</button>
     </div>
   </div>
-
   <div class="top-row">
-    <div class="info-box">
-      <div class="label">🍫 剩余</div>
-      <div class="value" id="mineCount">40</div>
-    </div>
-    <div class="info-box">
-      <div class="label">⏱ 时间</div>
-      <div class="value" id="timerVal">0</div>
-    </div>
+    <div class="info-box"><div class="label">🍫 剩余</div><div class="value" id="mineCount">40</div></div>
+    <div class="info-box"><div class="label">⏱ 时间</div><div class="value" id="timerVal">0</div></div>
+    <button class="flag-btn reveal-mode" id="btnFlag">📌 挖开</button>
     <button class="btn btn-primary" id="btnNew">🔄 新游戏</button>
   </div>
-
-  <div class="board-frame">
-    <canvas id="board"></canvas>
-  </div>
+  <div class="board-frame"><canvas id="board"></canvas></div>
 </div>
-
 <a href="index.html" class="back-btn">← 大厅</a>
 
 <script type="module">
 import { getHighScore, setHighScore } from "/src/js/storage.js";
 
 const DIFFS = [
-  { name: "简单", rows: 9, cols: 9, mines: 10 },
-  { name: "中等", rows: 16, cols: 16, mines: 40 },
-  { name: "困难", rows: 16, cols: 30, mines: 99 },
+  { name:"简单", rows:9, cols:9, mines:10 },
+  { name:"中等", rows:16, cols:16, mines:40 },
+  { name:"困难", rows:16, cols:30, mines:99 },
 ];
+const canvas=document.getElementById("board");
+const ctx=canvas.getContext("2d");
 
-const canvas = document.getElementById("board");
-const ctx = canvas.getContext("2d");
+let CELL=36,rows,cols,totalMines;
+let board=[],revealed=[],flagged=[];
+let gameOver=false,gameWon=false,firstClick=true;
+let minesLeft=0,timerVal=0,timerInterval=null,currentDiff=1;
+let flagMode=false; // false=reveal, true=flag
 
-let CELL = 36;
-let rows, cols, totalMines;
-let board = [];       // -1 = mine, 0-8 = adjacent count
-let revealed = [];    // boolean
-let flagged = [];     // boolean
-let gameOver = false;
-let gameWon = false;
-let firstClick = true;
-let minesLeft = 0;
-let timerVal = 0;
-let timerInterval = null;
-let currentDiff = 1;
+const elMine=document.getElementById("mineCount"),elTimer=document.getElementById("timerVal");
+const elBtn=document.getElementById("btnNew"),elFlag=document.getElementById("btnFlag");
+const diffBtns=document.querySelectorAll(".diff-btn");
 
-const elMine = document.getElementById("mineCount");
-const elTimer = document.getElementById("timerVal");
-const elBtn = document.getElementById("btnNew");
-const diffBtns = document.querySelectorAll(".diff-btn");
+function updateFlagBtn() {
+  if(flagMode){elFlag.textContent="🍭 插旗";elFlag.className="flag-btn flag-mode"}
+  else{elFlag.textContent="📌 挖开";elFlag.className="flag-btn reveal-mode"}
+}
+elFlag.addEventListener("click",()=>{flagMode=!flagMode;updateFlagBtn();});
+
+function resizeCanvas() {
+  const d=DIFFS[currentDiff];
+  CELL=Math.max(26, Math.min(38, Math.floor((Math.min(window.innerWidth-48, 720))/d.cols)));
+  canvas.width=d.cols*CELL; canvas.height=d.rows*CELL;
+}
 
 function init(diffIdx) {
-  currentDiff = diffIdx;
-  const d = DIFFS[diffIdx];
-  rows = d.rows;
-  cols = d.cols;
-  totalMines = d.mines;
-  minesLeft = totalMines;
-
-  CELL = Math.max(28, Math.min(40, Math.floor((Math.min(window.innerWidth - 60, 720)) / cols)));
-  canvas.width = cols * CELL;
-  canvas.height = rows * CELL;
-
-  board = Array.from({ length: rows }, () => new Array(cols).fill(0));
-  revealed = Array.from({ length: rows }, () => new Array(cols).fill(false));
-  flagged = Array.from({ length: rows }, () => new Array(cols).fill(false));
-  gameOver = false;
-  gameWon = false;
-  firstClick = true;
-  timerVal = 0;
-
-  if (timerInterval) clearInterval(timerInterval);
-  timerInterval = null;
-  elTimer.textContent = "0";
-  elMine.textContent = minesLeft;
-
-  diffBtns.forEach(b => b.classList.remove("active"));
+  currentDiff=diffIdx; const d=DIFFS[diffIdx];
+  rows=d.rows; cols=d.cols; totalMines=d.mines; minesLeft=totalMines;
+  resizeCanvas();
+  board=Array.from({length:rows},()=>new Array(cols).fill(0));
+  revealed=Array.from({length:rows},()=>new Array(cols).fill(false));
+  flagged=Array.from({length:rows},()=>new Array(cols).fill(false));
+  gameOver=false;gameWon=false;firstClick=true;timerVal=0;
+  if(timerInterval)clearInterval(timerInterval);timerInterval=null;
+  elTimer.textContent="0";elMine.textContent=minesLeft;
+  diffBtns.forEach(b=>b.classList.remove("active"));
   diffBtns[diffIdx].classList.add("active");
-
   draw();
 }
 
-function placeMines(safeR, safeC) {
-  // Build safe zone
-  const safeZone = new Set();
-  for (let dr = -1; dr <= 1; dr++) {
-    for (let dc = -1; dc <= 1; dc++) {
-      const r = safeR + dr, c = safeC + dc;
-      if (r >= 0 && r < rows && c >= 0 && c < cols) safeZone.add(`${r},${c}`);
-    }
+function placeMines(safeR,safeC) {
+  const safeZone=new Set();
+  for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+    const r=safeR+dr,c=safeC+dc;
+    if(r>=0&&r<rows&&c>=0&&c<cols)safeZone.add(`${r},${c}`);
   }
-
-  let placed = 0;
-  while (placed < totalMines) {
-    const r = Math.floor(Math.random() * rows);
-    const c = Math.floor(Math.random() * cols);
-    if (safeZone.has(`${r},${c}`) || board[r][c] === -1) continue;
-    board[r][c] = -1;
-    placed++;
+  let placed=0;
+  while(placed<totalMines){
+    const r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);
+    if(safeZone.has(`${r},${c}`)||board[r][c]===-1)continue;
+    board[r][c]=-1;placed++;
   }
-
-  // Calculate numbers
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (board[r][c] === -1) continue;
-      let cnt = 0;
-      for (let dr = -1; dr <= 1; dr++) {
-        for (let dc = -1; dc <= 1; dc++) {
-          const nr = r + dr, nc = c + dc;
-          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc] === -1) cnt++;
-        }
-      }
-      board[r][c] = cnt;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(board[r][c]===-1)continue;let cnt=0;
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&board[nr][nc]===-1)cnt++;
     }
+    board[r][c]=cnt;
   }
 }
 
-function reveal(r, c) {
-  if (r < 0 || r >= rows || c < 0 || c >= cols) return;
-  if (revealed[r][c] || flagged[r][c]) return;
-
-  revealed[r][c] = true;
-
-  if (board[r][c] === 0) {
-    for (let dr = -1; dr <= 1; dr++) {
-      for (let dc = -1; dc <= 1; dc++) {
-        reveal(r + dr, c + dc);
-      }
-    }
-  }
+function reveal(r,c) {
+  if(r<0||r>=rows||c<0||c>=cols)return;
+  if(revealed[r][c]||flagged[r][c])return;
+  revealed[r][c]=true;
+  if(board[r][c]===0)for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++)reveal(r+dr,c+dc);
 }
 
 function checkWin() {
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (board[r][c] !== -1 && !revealed[r][c]) return false;
-    }
-  }
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(board[r][c]!==-1&&!revealed[r][c])return false;
   return true;
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const x = c * CELL, y = r * CELL;
-      const cx = x + CELL / 2, cy = y + CELL / 2;
-
-      if (revealed[r][c]) {
-        // Revealed cell
-        ctx.fillStyle = "#f0e8e0";
-        ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-
-        if (board[r][c] === -1) {
-          // Mine
-          ctx.font = `${CELL * 0.6}px sans-serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText("🍫", cx, cy + 1);
-        } else if (board[r][c] > 0) {
-          // Number
-          ctx.font = `bold ${CELL * 0.55}px 'Quicksand', sans-serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          const numColors = ["", "#5D9CEC", "#4FC47F", "#ED5565", "#8067B7", "#AC92EC", "#48CFAD", "#8B5E3C", "#656D78"];
-          ctx.fillStyle = numColors[board[r][c]] || "#333";
-          ctx.fillText(board[r][c], cx, cy + 1);
-        }
-      } else {
-        // Unrevealed cell
-        const isPressed = false;
-        ctx.fillStyle = "#d4c5b9";
-        ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-
-        // 3D effect
-        ctx.fillStyle = "rgba(255,255,255,0.35)";
-        ctx.fillRect(x + 1, y + 1, CELL - 2, 2);
-        ctx.fillRect(x + 1, y + 1, 2, CELL - 2);
-        ctx.fillStyle = "rgba(0,0,0,0.1)";
-        ctx.fillRect(x + 1, y + CELL - 3, CELL - 2, 2);
-        ctx.fillRect(x + CELL - 3, y + 1, 2, CELL - 2);
-
-        if (flagged[r][c]) {
-          // Flag
-          ctx.font = `${CELL * 0.55}px sans-serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText("🍭", cx, cy + 1);
-        }
-      }
-
-      // Grid line
-      ctx.strokeStyle = "#c4b5a5";
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(x, y, CELL, CELL);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const x=c*CELL,y=r*CELL,cx=x+CELL/2,cy=y+CELL/2;
+    if(revealed[r][c]){
+      ctx.fillStyle="#f0e8e0";ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
+      if(board[r][c]===-1){ctx.font=`${CELL*0.6}px sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("🍫",cx,cy+1)}
+      else if(board[r][c]>0){ctx.font=`bold ${CELL*0.5}px 'Quicksand',sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+        const nc=["","#5D9CEC","#4FC47F","#ED5565","#8067B7","#AC92EC","#48CFAD","#8B5E3C","#656D78"];ctx.fillStyle=nc[board[r][c]]||"#333";ctx.fillText(board[r][c],cx,cy+1)}
+    }else{
+      ctx.fillStyle="#d4c5b9";ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
+      ctx.fillStyle="rgba(255,255,255,0.35)";ctx.fillRect(x+1,y+1,CELL-2,2);ctx.fillRect(x+1,y+1,2,CELL-2);
+      ctx.fillStyle="rgba(0,0,0,0.1)";ctx.fillRect(x+1,y+CELL-3,CELL-2,2);ctx.fillRect(x+CELL-3,y+1,2,CELL-2);
+      if(flagged[r][c]){ctx.font=`${CELL*0.55}px sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("🍭",cx,cy+1)}
     }
+    ctx.strokeStyle="#c4b5a5";ctx.lineWidth=0.5;ctx.strokeRect(x,y,CELL,CELL);
   }
-
-  // Game over overlay
-  if (gameOver && !gameWon) {
-    ctx.fillStyle = "rgba(250, 240, 235, 0.85)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#8B5E3C";
-    ctx.font = `bold ${CELL * 0.7}px 'Quicksand', sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("💥 踩到巧克力炸弹！", canvas.width / 2, canvas.height / 2);
-  }
-  if (gameWon) {
-    ctx.fillStyle = "rgba(250, 240, 235, 0.85)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#8B5E3C";
-    ctx.font = `bold ${CELL * 0.7}px 'Quicksand', sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("🎉 扫雷成功！", canvas.width / 2, canvas.height / 2);
-  }
+  if(gameOver&&!gameWon){ctx.fillStyle="rgba(250,240,235,0.85)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle="#8B5E3C";ctx.font=`bold ${CELL*0.7}px 'Quicksand',sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("💥 踩到巧克力炸弹！",canvas.width/2,canvas.height/2)}
+  if(gameWon){ctx.fillStyle="rgba(250,240,235,0.85)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle="#8B5E3C";ctx.font=`bold ${CELL*0.7}px 'Quicksand',sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("🎉 扫雷成功！",canvas.width/2,canvas.height/2)}
 }
 
-function startTimer() {
-  if (timerInterval) return;
-  timerInterval = setInterval(() => {
-    timerVal++;
-    elTimer.textContent = timerVal;
-  }, 1000);
-}
+function startTimer(){if(timerInterval)return;timerInterval=setInterval(()=>{timerVal++;elTimer.textContent=timerVal},1000)}
 
-canvas.addEventListener("click", (e) => {
-  if (gameOver || gameWon) return;
-  const rect = canvas.getBoundingClientRect();
-  const c = Math.floor((e.clientX - rect.left) / CELL);
-  const r = Math.floor((e.clientY - rect.top) / CELL);
-  if (r < 0 || r >= rows || c < 0 || c >= cols) return;
-  if (flagged[r][c]) return;
+function handleCell(r,c) {
+  if(gameOver||gameWon)return;
+  if(r<0||r>=rows||c<0||c>=cols)return;
 
-  if (firstClick) {
-    firstClick = false;
-    placeMines(r, c);
-    startTimer();
-  }
-
-  if (board[r][c] === -1) {
-    // Hit mine
-    gameOver = true;
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-    // Reveal all mines
-    for (let rr = 0; rr < rows; rr++)
-      for (let cc = 0; cc < cols; cc++)
-        if (board[rr][cc] === -1) revealed[rr][cc] = true;
+  if(flagMode){
+    if(revealed[r][c])return;
+    flagged[r][c]=!flagged[r][c];
+    minesLeft+=flagged[r][c]?-1:1;
+    elMine.textContent=minesLeft;
     draw();
     return;
   }
 
-  reveal(r, c);
-  if (checkWin()) {
-    gameWon = true;
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-    const prev = getHighScore("minesweeper");
-    // Store best time (lower is better) — hack: store as negative for "higher is better"
-    const timeScore = timerVal;
-    setHighScore("minesweeper_" + currentDiff, -timeScore);
-    revealAll();
-  }
+  if(flagged[r][c])return;
+  if(firstClick){firstClick=false;placeMines(r,c);startTimer()}
+  if(board[r][c]===-1){gameOver=true;if(timerInterval){clearInterval(timerInterval);timerInterval=null}
+    for(let rr=0;rr<rows;rr++)for(let cc=0;cc<cols;cc++)if(board[rr][cc]===-1)revealed[rr][cc]=true;draw();return}
+  reveal(r,c);
+  if(checkWin()){gameWon=true;if(timerInterval){clearInterval(timerInterval);timerInterval=null}
+    setHighScore("minesweeper_"+currentDiff,-timerVal);
+    for(let rr=0;rr<rows;rr++)for(let cc=0;cc<cols;cc++)if(board[rr][cc]!==-1)revealed[rr][cc]=true}
   draw();
-});
-
-canvas.addEventListener("contextmenu", (e) => {
-  e.preventDefault();
-  if (gameOver || gameWon || firstClick) return;
-
-  const rect = canvas.getBoundingClientRect();
-  const c = Math.floor((e.clientX - rect.left) / CELL);
-  const r = Math.floor((e.clientY - rect.top) / CELL);
-  if (r < 0 || r >= rows || c < 0 || c >= cols) return;
-  if (revealed[r][c]) return;
-
-  flagged[r][c] = !flagged[r][c];
-  minesLeft += flagged[r][c] ? -1 : 1;
-  elMine.textContent = minesLeft;
-  draw();
-});
-
-function revealAll() {
-  for (let r = 0; r < rows; r++)
-    for (let c = 0; c < cols; c++)
-      if (board[r][c] !== -1) revealed[r][c] = true;
 }
 
-elBtn.addEventListener("click", () => init(currentDiff));
-
-diffBtns.forEach(btn => {
-  btn.addEventListener("click", () => {
-    init(parseInt(btn.dataset.diff));
-  });
+canvas.addEventListener("click",(e)=>{
+  const rect=canvas.getBoundingClientRect();
+  const c=Math.floor((e.clientX-rect.left)/CELL),r=Math.floor((e.clientY-rect.top)/CELL);
+  handleCell(r,c);
 });
 
-window.addEventListener("resize", () => {
-  CELL = Math.max(28, Math.min(40, Math.floor((Math.min(window.innerWidth - 60, 720)) / cols)));
-  canvas.width = cols * CELL;
-  canvas.height = rows * CELL;
-  draw();
+canvas.addEventListener("contextmenu",(e)=>{e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const c=Math.floor((e.clientX-rect.left)/CELL),r=Math.floor((e.clientY-rect.top)/CELL);
+  if(gameOver||gameWon||firstClick)return;
+  if(revealed[r][c])return;
+  flagged[r][c]=!flagged[r][c];minesLeft+=flagged[r][c]?-1:1;elMine.textContent=minesLeft;draw();
 });
+
+// Long press for flag on mobile
+let longPressTimer=null,longPressPos=null;
+canvas.addEventListener("touchstart",(e)=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const c=Math.floor((e.touches[0].clientX-rect.left)/CELL),r=Math.floor((e.touches[0].clientY-rect.top)/CELL);
+  longPressPos={r,c};
+  longPressTimer=setTimeout(()=>{
+    if(longPressPos&&!gameOver&&!gameWon&&!firstClick){
+      const{r,c}=longPressPos;
+      if(!revealed[r][c]){flagged[r][c]=!flagged[r][c];minesLeft+=flagged[r][c]?-1:1;elMine.textContent=minesLeft;draw();}
+    }
+    longPressPos=null;longPressTimer=null;
+  },400);
+},{passive:false});
+
+canvas.addEventListener("touchmove",()=>{if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;longPressPos=null}},{passive:false});
+
+canvas.addEventListener("touchend",(e)=>{
+  if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;
+    if(longPressPos){handleCell(longPressPos.r,longPressPos.c);longPressPos=null}
+  }
+},{passive:false});
+
+elBtn.addEventListener("click",()=>init(currentDiff));
+diffBtns.forEach(b=>b.addEventListener("click",()=>init(parseInt(b.dataset.diff))));
+window.addEventListener("resize",()=>{resizeCanvas();draw();});
 
 init(1);
 </script>
