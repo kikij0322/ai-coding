@@ -11,73 +11,75 @@
   body {
     display:flex; justify-content:center; align-items:center;
     min-height:100vh; min-height:100dvh;
-    position:relative; padding:6px;
+    position:relative; padding:4px;
     background: linear-gradient(135deg, #ffe4ec 0%, #fff5ee 30%, #ffe4e1 60%, #ffe4ec 100%);
     font-family: var(--font-body);
   }
   .game-wrapper {
-    display:flex; gap:10px; align-items:flex-start;
-    max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px);
+    display:flex; gap:8px; align-items:stretch;
+    max-height: calc(100vh - 12px); max-height: calc(100dvh - 12px);
   }
   .main-col {
-    display:flex; flex-direction:column; align-items:center; gap:6px;
-    flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
   }
   .title {
-    font-family:var(--font-display); font-size:clamp(15px,3.5vw,20px); font-weight:700; color:var(--text);
+    font-family:var(--font-display); font-size:clamp(14px,3.5vw,18px); font-weight:700; color:var(--text);
+    flex-shrink:0;
   }
   .canvas-frame {
-    background:#fff; border-radius:12px; padding:4px;
+    background:#fff; border-radius:12px; padding:3px;
     box-shadow: 0 0 0 3px var(--pink), 0 4px 20px rgba(255,182,193,0.3);
   }
   canvas#board { display:block; border-radius:8px; background:#faf5f2; }
-  .top-btns { display:flex; gap:6px; flex-shrink:0; }
-  .top-btns .btn { padding:5px 14px; font-size:13px; }
 
-  /* Controls below board */
   .controls {
-    display:flex; flex-direction:column; align-items:center; gap:4px;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
     flex-shrink:0;
   }
-  .ctrl-row { display:flex; gap:5px; }
+  .ctrl-row { display:flex; gap:4px; }
   .cbtn {
-    width:52px; height:52px; border-radius:14px;
+    width:50px; height:50px; border-radius:14px;
     border:2px solid var(--pink); background:rgba(255,255,255,0.9);
     font-size:22px; display:flex; align-items:center; justify-content:center;
     cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
-    touch-action:manipulation; transition: all 0.1s;
+    touch-action:manipulation;
   }
   .cbtn:active { background:var(--pink-light); transform:scale(0.93); }
-  .cbtn.wide { width:116px; height:44px; font-family:var(--font-display); font-size:14px; font-weight:700; }
+  .cbtn.wide { width:110px; height:42px; font-family:var(--font-display); font-size:14px; font-weight:700; }
 
-  /* Right panel */
+  /* Right panel - fills height to match board */
   .side-panel {
-    display:flex; flex-direction:column; gap:6px; align-items:center;
+    display:flex; flex-direction:column; gap:4px;
+    flex:1; min-width:90px; max-width:130px;
   }
-  .info-box {
+  .side-panel .info-box {
     text-align:center; background:rgba(255,255,255,0.8);
-    padding:5px 12px; border-radius:12px; border:2px solid var(--pink);
-    box-shadow: var(--shadow-sm); width:100%;
+    padding:6px 8px; border-radius:12px; border:2px solid var(--pink);
+    box-shadow: var(--shadow-sm);
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
   }
-  .info-box .l { font-size:10px; color:var(--text-light); font-weight:600; }
-  .info-box .v { font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--pink-deep); }
+  .side-panel .info-box .l { font-size:10px; color:var(--text-light); font-weight:600; }
+  .side-panel .info-box .v { font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--pink-deep); }
   .next-frame {
-    background:#fff; border-radius:10px; padding:4px;
+    background:#fff; border-radius:10px; padding:3px;
     border:2px solid var(--pink); box-shadow:var(--shadow-sm);
+    flex-shrink:0; display:flex; align-items:center; justify-content:center;
   }
   canvas#nextCanvas { display:block; }
+  .side-panel .btn { font-size:12px; padding:5px 8px; flex-shrink:0; }
 
-  .back-btn { position:fixed; top:8px; left:8px; z-index:100; }
+  .back-btn { position:fixed; top:6px; left:6px; z-index:100; }
 
   @media (max-width:380px) {
-    .game-wrapper { flex-direction:column; align-items:center; max-height:none; gap:4px; }
-    .side-panel { flex-direction:row; flex-wrap:wrap; justify-content:center; gap:4px; }
-    .side-panel .info-box { width:auto; padding:3px 8px; }
+    .game-wrapper { flex-direction:column; align-items:center; max-height:none; gap:3px; }
+    .side-panel { flex-direction:row; flex-wrap:wrap; justify-content:center; gap:3px; flex:none; max-width:none; }
+    .side-panel .info-box { flex:none; width:auto; padding:3px 8px; }
     .side-panel .info-box .v { font-size:13px; }
     .side-panel .info-box .l { font-size:8px; }
+    .side-panel .btn { display:none; }
     .title { font-size:14px; }
-    .cbtn { width:42px; height:42px; font-size:18px; }
-    .cbtn.wide { width:94px; height:38px; font-size:12px; }
+    .cbtn { width:44px; height:44px; font-size:18px; }
+    .cbtn.wide { width:100px; height:38px; font-size:13px; }
     .next-frame { display:none; }
   }
 </style>
@@ -87,10 +89,6 @@
   <div class="main-col">
     <div class="title">🍮 布丁方块</div>
     <div class="canvas-frame"><canvas id="board"></canvas></div>
-    <div class="top-btns">
-      <button class="btn btn-secondary" id="btnPause">⏸ 暂停</button>
-      <button class="btn btn-primary" id="btnNew">🔄 新游戏</button>
-    </div>
     <div class="controls">
       <div class="ctrl-row">
         <button class="cbtn wide" id="btnR">🔄 旋转</button>
@@ -109,6 +107,8 @@
     <div class="info-box"><div class="l">📏 行数</div><div class="v" id="ln">0</div></div>
     <div class="info-box"><div class="l">🏆 最高</div><div class="v" id="bestV">0</div></div>
     <div class="next-frame"><canvas id="nextCanvas" width="90" height="70"></canvas></div>
+    <button class="btn btn-secondary" id="btnPause">⏸ 暂停</button>
+    <button class="btn btn-primary" id="btnNew">🔄 新游戏</button>
   </div>
 </div>
 <a href="index.html" class="back-btn">← 大厅</a>
@@ -132,8 +132,8 @@ const eS=document.getElementById("s"),eLv=document.getElementById("lv"),eLn=docu
 eB.textContent=best;
 
 function resize(){
-  const vh=window.innerHeight-180;
-  const vw=window.innerWidth-160;
+  const vh=window.innerHeight-110;
+  const vw=window.innerWidth-170;
   CELL=Math.max(18,Math.min(Math.floor(vh/ROWS),Math.floor(vw/COLS)));
   canvas.width=COLS*CELL;canvas.height=ROWS*CELL;
 }
