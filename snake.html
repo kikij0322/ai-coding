@@ -7,95 +7,98 @@
 <link rel="icon" href="/favicon.svg" />
 <link rel="stylesheet" href="/src/styles/shared.css" />
 <style>
+  * { margin:0; padding:0; box-sizing:border-box; }
   body {
-    display: flex; justify-content: center; align-items: center;
-    min-height: 100vh; min-height: 100dvh;
-    position: relative; overflow: hidden;
-    padding: 8px;
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100vh; min-height:100dvh;
+    position:relative; overflow:hidden;
+    background: linear-gradient(135deg, #ffe4ec 0%, #fff5ee 30%, #ffe4e1 60%, #ffe4ec 100%);
+    font-family: var(--font-body);
+    padding: 0;
   }
-  .game-wrapper {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 10px; position: relative; z-index: 1;
-    width: 100%; max-width: 620px;
+
+  .top-bar {
+    display:flex; align-items:center; gap:20px;
+    padding: 10px 16px 6px;
+    flex-shrink: 0;
+    width: 100%; justify-content: center;
+    flex-wrap: wrap;
   }
-  .title-ribbon {
-    background: linear-gradient(135deg, var(--pink-deep), var(--pink));
-    color: #fff; font-family: var(--font-display);
-    font-size: clamp(16px, 4vw, 22px); font-weight: 700;
-    padding: 6px 24px; border-radius: 30px;
-    box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 8px;
+  .title {
+    font-family: var(--font-display);
+    font-size: clamp(16px,4vw,20px); font-weight:700; color:var(--text);
   }
-  .score-panel { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .stats {
+    display:flex; gap:6px;
+  }
   .stat {
-    text-align: center; background: rgba(255,255,255,0.78);
-    backdrop-filter: blur(8px); padding: 6px 12px;
-    border-radius: var(--radius-md); border: 2px solid var(--pink);
-    box-shadow: var(--shadow-sm); min-width: 55px;
+    text-align:center; background:rgba(255,255,255,0.75);
+    padding:3px 10px; border-radius:20px; border:2px solid var(--pink);
+    font-size:12px;
   }
-  .stat-label { color: var(--text-light); font-size: 10px; font-weight: 600; letter-spacing: 1px; }
-  .stat-value { color: var(--pink-deep); font-family: var(--font-display); font-size: 22px; font-weight: 700; }
-  .stat-value.best { color: #e75480; }
-  .canvas-frame {
-    background: #fff; border-radius: var(--radius-lg); padding: 6px;
-    box-shadow: var(--shadow-lg), 0 0 0 3px var(--pink);
+  .stat .v { font-family:var(--font-display); font-weight:700; color:var(--pink-deep); font-size:16px; }
+
+  .game-area {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    width:100%; padding:4px;
+    min-height:0;
   }
-  canvas { border-radius: var(--radius-md); display: block; background: #fff5f8; max-width: 100%; }
-  .controls-hint {
-    color: var(--text-light); font-size: 12px; font-weight: 600;
-    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+  canvas {
+    display:block; border-radius:12px;
+    background:#fff5f8;
+    box-shadow: 0 0 0 3px var(--pink), 0 4px 20px rgba(255,182,193,0.3);
+    max-width:100%;
   }
-  .controls-hint span { display: flex; align-items: center; gap: 4px; }
-  kbd {
-    display: inline-block; padding: 2px 8px; border-radius: 20px;
-    background: #fff; color: var(--pink-deep); font-size: 10px;
-    font-family: var(--font-display); font-weight: 600;
-    border: 2px solid var(--pink); box-shadow: 0 2px 6px rgba(255,182,193,0.2);
+
+  .dpad {
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:4px 0 10px; flex-shrink:0;
   }
-  @media (max-width: 600px) {
-    .controls-hint { display: none; }
-    .game-wrapper { gap: 6px; }
-    .canvas-frame { padding: 4px; }
+  .dpad-row { display:flex; gap:4px; }
+  .dpad-btn {
+    width:44px; height:44px; border-radius:14px;
+    border:2px solid var(--pink); background:rgba(255,255,255,0.85);
+    font-size:18px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
   }
-  .touch-dpad { margin-top:8px; }
-  .touch-dpad .dpad-row { display:flex; gap:6px; justify-content:center; }
-  .touch-dpad .dpad-btn { width:48px; height:48px; border-radius:14px; border:2px solid var(--pink); background:rgba(255,255,255,0.85); font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
-  .touch-dpad .dpad-btn:active { background:var(--pink-light); }
-  .touch-dpad .dpad-empty { width:48px; height:48px; }
-  </style>
+  .dpad-btn:active { background:var(--pink-light); }
+  .dpad-empty { width:44px; height:44px; }
+
+  .back-btn { position:fixed; top:8px; left:8px; z-index:100; }
+</style>
 </head>
 <body>
-
-<div class="game-wrapper">
-  <div class="title-ribbon">🍬 糖果贪吃蛇</div>
-  <div class="score-panel">
-    <div class="stat"><div class="stat-label">⭐ 得分</div><div class="stat-value" id="score">0</div></div>
-    <div class="stat"><div class="stat-label">🏆 最高</div><div class="stat-value best" id="best">0</div></div>
-    <div class="stat"><div class="stat-label">🍬 长度</div><div class="stat-value" id="lengthVal">3</div></div>
-  </div>
-  <div class="canvas-frame"><canvas id="game"></canvas></div>
-  <div class="controls-hint">
-    <span><kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移动</span>
-    <span><kbd>空格</kbd> 暂停</span>
-    <span><kbd>R</kbd> 重新开始</span>
+<div class="top-bar">
+  <div class="title">🍬 糖果贪吃蛇</div>
+  <div class="stats">
+    <div class="stat">⭐ <span class="v" id="score">0</span></div>
+    <div class="stat">🏆 <span class="v" id="best">0</span></div>
+    <div class="stat">🍬 <span class="v" id="len">3</span></div>
   </div>
 </div>
-  <div class="touch-dpad" id="dpad">
-    <div class="dpad-row">
-      <div class="dpad-empty"></div>
-      <button class="dpad-btn" id="dpadUp">▲</button>
-      <div class="dpad-empty"></div>
-    </div>
-    <div class="dpad-row">
-      <button class="dpad-btn" id="dpadLeft">◀</button>
-      <button class="dpad-btn" id="dpadPause">⏯</button>
-      <button class="dpad-btn" id="dpadRight">▶</button>
-    </div>
-    <div class="dpad-row">
-      <div class="dpad-empty"></div>
-      <button class="dpad-btn" id="dpadDown">▼</button>
-      <div class="dpad-empty"></div>
-    </div>
+
+<div class="game-area">
+  <canvas id="game"></canvas>
+</div>
+
+<div class="dpad">
+  <div class="dpad-row">
+    <div class="dpad-empty"></div>
+    <button class="dpad-btn" id="dpadUp">▲</button>
+    <div class="dpad-empty"></div>
   </div>
+  <div class="dpad-row">
+    <button class="dpad-btn" id="dpadLeft">◀</button>
+    <button class="dpad-btn" id="dpadPause">⏯</button>
+    <button class="dpad-btn" id="dpadRight">▶</button>
+  </div>
+  <div class="dpad-row">
+    <div class="dpad-empty"></div>
+    <button class="dpad-btn" id="dpadDown">▼</button>
+    <div class="dpad-empty"></div>
+  </div>
+</div>
 
 <a href="index.html" class="back-btn">← 大厅</a>
 
@@ -107,247 +110,159 @@ import { getHighScore, setHighScore } from "/src/js/storage.js";
   const ctx = canvas.getContext("2d");
   const scoreEl = document.getElementById("score");
   const bestEl = document.getElementById("best");
-  const lengthEl = document.getElementById("lengthVal");
+  const lenEl = document.getElementById("len");
 
   const COLS = 30, ROWS = 30;
-  let GRID = 20;
+  let GRID = 18;
 
-  const BG_COLOR = "#fff5f8", GRID_LINE = "#ffe4ec";
-  const HEAD_COLOR = "#ffb6c1", BODY_COLOR = "#ff9ec4", BODY_ALT = "#f8a0b8";
-  const FOOD_COLOR = "#ff6b8a", OVERLAY_BG = "rgba(255, 240, 245, 0.88)";
+  const BG = "#fff5f8", GL = "#ffe4ec";
+  const HC = "#ffb6c1", BC = "#ff9ec4", BA = "#f8a0b8";
+  const FC = "#ff6b8a", OV = "rgba(255,240,245,0.88)";
 
-  let snake, food, dir, nextDir, score, best, speed, gameLoop, paused, gameOver, particles;
-  const candyEmojis = ["🍬","🍭","🍡","🍫","🧁","🍪","🍩","🍦"];
+  let snake,food,dir,nextDir,score,best,speed,loop,paused,over,parts;
 
-  function resizeCanvas() {
-    const maxW = Math.min(window.innerWidth - 28, 600);
-    const maxH = Math.min(window.innerHeight - 240, 600);
-    GRID = Math.floor(Math.min(maxW / COLS, maxH / ROWS));
-    if (GRID < 10) GRID = 10;
+  function resize() {
+    const area = document.querySelector(".game-area");
+    const maxW = area.clientWidth - 16;
+    const maxH = area.clientHeight - 8;
+    GRID = Math.max(12, Math.floor(Math.min(maxW / COLS, maxH / ROWS)));
     canvas.width = COLS * GRID;
     canvas.height = ROWS * GRID;
   }
 
   function init() {
-    resizeCanvas();
-    const cx = Math.floor(COLS/2), cy = Math.floor(ROWS/2);
-    snake = [{x:cx,y:cy},{x:cx-1,y:cy},{x:cx-2,y:cy}];
-    dir = {x:1,y:0}; nextDir = {x:1,y:0};
-    score = 0; speed = 120; food = null; particles = [];
-    gameOver = false; paused = false;
-    spawnFood(); updateUI(); bestEl.textContent = best;
+    resize();
+    const cx=Math.floor(COLS/2),cy=Math.floor(ROWS/2);
+    snake=[{x:cx,y:cy},{x:cx-1,y:cy},{x:cx-2,y:cy}];
+    dir={x:1,y:0};nextDir={x:1,y:0};
+    score=0;speed=120;food=null;parts=[];
+    over=false;paused=false;
+    spawnFood();updateUI();bestEl.textContent=best;
   }
 
   function spawnFood() {
-    const occupied = new Set(snake.map(s => `${s.x},${s.y}`));
-    const pool = [];
-    for (let x=0;x<COLS;x++) for (let y=0;y<ROWS;y++)
-      if (!occupied.has(`${x},${y}`)) pool.push({x,y});
-    if (pool.length===0) return;
-    food = pool[Math.floor(Math.random()*pool.length)];
+    const occ=new Set(snake.map(s=>`${s.x},${s.y}`));
+    const pool=[];
+    for(let x=0;x<COLS;x++)for(let y=0;y<ROWS;y++)if(!occ.has(`${x},${y}`))pool.push({x,y});
+    if(pool.length===0)return;
+    food=pool[Math.floor(Math.random()*pool.length)];
   }
 
   function updateUI() {
-    scoreEl.textContent = score;
-    lengthEl.textContent = snake.length;
-    if (score > best) { best = score; setHighScore("snake", best); bestEl.textContent = best; }
+    scoreEl.textContent=score;lenEl.textContent=snake.length;
+    if(score>best){best=score;setHighScore("snake",best);bestEl.textContent=best;}
   }
 
   function step() {
-    if (paused || gameOver) return;
-    dir = {...nextDir};
-    const head = snake[0];
-    const nh = {x:head.x+dir.x, y:head.y+dir.y};
-    if (nh.x<0||nh.x>=COLS||nh.y<0||nh.y>=ROWS) { endGame(); return; }
-    for (const s of snake) if (s.x===nh.x&&s.y===nh.y) { endGame(); return; }
-
+    if(paused||over)return;
+    dir={...nextDir};
+    const h=snake[0],nh={x:h.x+dir.x,y:h.y+dir.y};
+    if(nh.x<0||nh.x>=COLS||nh.y<0||nh.y>=ROWS){end();return}
+    for(const s of snake)if(s.x===nh.x&&s.y===nh.y){end();return}
     snake.unshift(nh);
-    if (food && nh.x===food.x && nh.y===food.y) {
-      score+=10; spawnParticles(food.x,food.y); food=null; spawnFood(); updateUI();
-      if (speed>60) { speed-=1; restartLoop(); }
-    } else { snake.pop(); }
+    if(food&&nh.x===food.x&&nh.y===food.y){
+      score+=10;spawnP(food.x,food.y);food=null;spawnFood();updateUI();
+      if(speed>60){speed-=1;reLoop();}
+    }else{snake.pop();}
   }
 
-  function restartLoop() {
-    if (gameLoop) clearInterval(gameLoop);
-    if (!gameOver && !paused) gameLoop = setInterval(step, speed);
-  }
+  function reLoop(){if(loop)clearInterval(loop);if(!over&&!paused)loop=setInterval(step,speed);}
+  function end(){over=true;if(loop)clearInterval(loop);loop=null;spawnDP(snake[0].x,snake[0].y);draw();}
+  function spawnP(gx,gy){for(let i=0;i<8;i++)parts.push({x:gx*GRID+GRID/2,y:gy*GRID+GRID/2,vx:(Math.random()-.5)*3,vy:(Math.random()-.5)*3-1,life:1,decay:.03,color:"#ffb6c1",s:3});}
+  function spawnDP(gx,gy){for(let i=0;i<12;i++)parts.push({x:gx*GRID+GRID/2,y:gy*GRID+GRID/2,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,life:1,decay:.018,color:"#ffb6c1",s:3});}
+  function updP(){parts=parts.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=p.decay;return p.life>0;});}
 
-  function endGame() {
-    gameOver=true; if(gameLoop)clearInterval(gameLoop); gameLoop=null;
-    spawnDeathParticles(snake[0].x,snake[0].y); draw();
-  }
-
-  function spawnParticles(gx,gy) {
-    for (let i=0;i<8;i++) particles.push({
-      x:gx*GRID+GRID/2,y:gy*GRID+GRID/2,
-      vx:(Math.random()-0.5)*3,vy:(Math.random()-0.5)*3-1,
-      life:1,decay:0.03,color:"#ffb6c1",size:3
-    });
-  }
-  function spawnDeathParticles(gx,gy) {
-    for (let i=0;i<12;i++) particles.push({
-      x:gx*GRID+GRID/2,y:gy*GRID+GRID/2,
-      vx:(Math.random()-0.5)*5,vy:(Math.random()-0.5)*5,
-      life:1,decay:0.018,color:"#ffb6c1",size:3
-    });
-  }
-
-  function updateParticles() {
-    particles = particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=p.decay;return p.life>0;});
-  }
-
-  function drawGrid() {
-    ctx.strokeStyle=GRID_LINE;ctx.lineWidth=0.5;
+  function drawGrid(){
+    ctx.strokeStyle=GL;ctx.lineWidth=.5;
     for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*GRID,0);ctx.lineTo(x*GRID,canvas.height);ctx.stroke();}
     for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*GRID);ctx.lineTo(canvas.width,y*GRID);ctx.stroke();}
   }
 
-  function drawSnake() {
-    for (let i=snake.length-1;i>=0;i--) {
+  function drawSnake(){
+    for(let i=snake.length-1;i>=0;i--){
       const s=snake[i],pad=1.5,x=s.x*GRID+pad,y=s.y*GRID+pad,w=GRID-pad*2;
-      if(i===0) {
+      if(i===0){
         const cx=x+w/2,cy=y+w/2,r=w/2;
-        ctx.shadowColor="rgba(255,105,180,0.4)";ctx.shadowBlur=4;
-        ctx.fillStyle=HEAD_COLOR;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-        const er=r*0.45,eo=r*0.55;
-        ctx.fillStyle=HEAD_COLOR;
-        ctx.beginPath();ctx.arc(cx-eo,cy-eo,er,0,Math.PI*2);ctx.fill();
-        ctx.beginPath();ctx.arc(cx+eo,cy-eo,er,0,Math.PI*2);ctx.fill();
-        ctx.fillStyle="#ffd0dc";
-        ctx.beginPath();ctx.arc(cx-eo,cy-eo,er*0.6,0,Math.PI*2);ctx.fill();
-        ctx.beginPath();ctx.arc(cx+eo,cy-eo,er*0.6,0,Math.PI*2);ctx.fill();
+        ctx.shadowColor="rgba(255,105,180,.4)";ctx.shadowBlur=3;
+        ctx.fillStyle=HC;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+        const er=r*.45,eo=r*.55;
+        ctx.fillStyle=HC;ctx.beginPath();ctx.arc(cx-eo,cy-eo,er,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(cx+eo,cy-eo,er,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle="#ffd0dc";ctx.beginPath();ctx.arc(cx-eo,cy-eo,er*.6,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(cx+eo,cy-eo,er*.6,0,Math.PI*2);ctx.fill();
         let bx,by;
-        if(dir.x===1){bx=cx+r*0.5;by=cy-r*0.55}else if(dir.x===-1){bx=cx-r*0.5;by=cy-r*0.55}
-        else if(dir.y===-1){bx=cx;by=cy-r*0.85}else{bx=cx;by=cy-r*0.25}
-        ctx.fillStyle="#ff1744";ctx.beginPath();ctx.arc(bx,by,r*0.2,0,Math.PI*2);ctx.fill();
-        ctx.beginPath();ctx.ellipse(bx-r*0.4,by-r*0.15,r*0.35,r*0.18,-0.3,0,Math.PI*2);ctx.fill();
-        ctx.beginPath();ctx.ellipse(bx+r*0.4,by-r*0.15,r*0.35,r*0.18,0.3,0,Math.PI*2);ctx.fill();
-        ctx.beginPath();ctx.moveTo(bx-r*0.15,by+r*0.1);ctx.lineTo(bx-r*0.25,by+r*0.45);ctx.lineTo(bx-r*0.05,by+r*0.3);ctx.fill();
-        ctx.beginPath();ctx.moveTo(bx+r*0.15,by+r*0.1);ctx.lineTo(bx+r*0.25,by+r*0.45);ctx.lineTo(bx+r*0.05,by+r*0.3);ctx.fill();
-        const eyeR=r*0.28;let ex1,ey1,ex2,ey2;
-        if(dir.x===1){ex1=cx+r*0.15;ey1=cy-r*0.1;ex2=cx+r*0.55;ey2=cy-r*0.1}
-        else if(dir.x===-1){ex1=cx-r*0.15;ey1=cy-r*0.1;ex2=cx-r*0.55;ey2=cy-r*0.1}
-        else if(dir.y===-1){ex1=cx-r*0.25;ey1=cy-r*0.35;ex2=cx+r*0.25;ey2=cy-r*0.35}
-        else{ex1=cx-r*0.25;ey1=cy+r*0.1;ex2=cx+r*0.25;ey2=cy+r*0.1}
+        if(dir.x===1){bx=cx+r*.5;by=cy-r*.55}else if(dir.x===-1){bx=cx-r*.5;by=cy-r*.55}else if(dir.y===-1){bx=cx;by=cy-r*.85}else{bx=cx;by=cy-r*.25}
+        ctx.fillStyle="#ff1744";ctx.beginPath();ctx.arc(bx,by,r*.2,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.ellipse(bx-r*.4,by-r*.15,r*.35,r*.18,-.3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(bx+r*.4,by-r*.15,r*.35,r*.18,.3,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.moveTo(bx-r*.15,by+r*.1);ctx.lineTo(bx-r*.25,by+r*.45);ctx.lineTo(bx-r*.05,by+r*.3);ctx.fill();ctx.beginPath();ctx.moveTo(bx+r*.15,by+r*.1);ctx.lineTo(bx+r*.25,by+r*.45);ctx.lineTo(bx+r*.05,by+r*.3);ctx.fill();
+        const eyeR=r*.28;let ex1,ey1,ex2,ey2;
+        if(dir.x===1){ex1=cx+r*.15;ey1=cy-r*.1;ex2=cx+r*.55;ey2=cy-r*.1}else if(dir.x===-1){ex1=cx-r*.15;ey1=cy-r*.1;ex2=cx-r*.55;ey2=cy-r*.1}else if(dir.y===-1){ex1=cx-r*.25;ey1=cy-r*.35;ex2=cx+r*.25;ey2=cy-r*.35}else{ex1=cx-r*.25;ey1=cy+r*.1;ex2=cx+r*.25;ey2=cy+r*.1}
         ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(ex1,ey1,eyeR,0,Math.PI*2);ctx.arc(ex2,ey2,eyeR,0,Math.PI*2);ctx.fill();
-        ctx.fillStyle="#1a1a2e";ctx.beginPath();ctx.arc(ex1,ey1,eyeR*0.6,0,Math.PI*2);ctx.fill();
-        ctx.beginPath();ctx.arc(ex2,ey2,eyeR*0.6,0,Math.PI*2);ctx.fill();
-        ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(ex1-eyeR*0.2,ey1-eyeR*0.2,eyeR*0.25,0,Math.PI*2);ctx.fill();
-        ctx.beginPath();ctx.arc(ex2-eyeR*0.2,ey2-eyeR*0.2,eyeR*0.25,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle="#1a1a2e";ctx.beginPath();ctx.arc(ex1,ey1,eyeR*.6,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(ex2,ey2,eyeR*.6,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(ex1-eyeR*.2,ey1-eyeR*.2,eyeR*.25,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(ex2-eyeR*.2,ey2-eyeR*.2,eyeR*.25,0,Math.PI*2);ctx.fill();
         let nx,ny;
-        if(dir.x===1){nx=cx+r*0.65;ny=cy+r*0.15}else if(dir.x===-1){nx=cx-r*0.65;ny=cy+r*0.15}
-        else if(dir.y===-1){nx=cx;ny=cy-r*0.65}else{nx=cx;ny=cy+r*0.5}
-        ctx.fillStyle="#ffdd57";ctx.beginPath();ctx.ellipse(nx,ny,r*0.14,r*0.1,0,0,Math.PI*2);ctx.fill();
-        ctx.strokeStyle="rgba(0,0,0,0.18)";ctx.lineWidth=0.6;
-        ctx.beginPath();ctx.moveTo(nx-r*0.9,ny-r*0.25);ctx.lineTo(nx-r*0.3,ny-r*0.05);ctx.stroke();
-        ctx.beginPath();ctx.moveTo(nx-r*0.9,ny+r*0.05);ctx.lineTo(nx-r*0.3,ny+r*0.1);ctx.stroke();
-        ctx.beginPath();ctx.moveTo(nx+r*0.9,ny-r*0.25);ctx.lineTo(nx+r*0.3,ny-r*0.05);ctx.stroke();
-        ctx.beginPath();ctx.moveTo(nx+r*0.9,ny+r*0.05);ctx.lineTo(nx+r*0.3,ny+r*0.1);ctx.stroke();
-      } else {
+        if(dir.x===1){nx=cx+r*.65;ny=cy+r*.15}else if(dir.x===-1){nx=cx-r*.65;ny=cy+r*.15}else if(dir.y===-1){nx=cx;ny=cy-r*.65}else{nx=cx;ny=cy+r*.5}
+        ctx.fillStyle="#ffdd57";ctx.beginPath();ctx.ellipse(nx,ny,r*.14,r*.1,0,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle="rgba(0,0,0,.18)";ctx.lineWidth=.6;
+        ctx.beginPath();ctx.moveTo(nx-r*.9,ny-r*.25);ctx.lineTo(nx-r*.3,ny-r*.05);ctx.stroke();ctx.beginPath();ctx.moveTo(nx-r*.9,ny+r*.05);ctx.lineTo(nx-r*.3,ny+r*.1);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(nx+r*.9,ny-r*.25);ctx.lineTo(nx+r*.3,ny-r*.05);ctx.stroke();ctx.beginPath();ctx.moveTo(nx+r*.9,ny+r*.05);ctx.lineTo(nx+r*.3,ny+r*.1);ctx.stroke();
+      }else{
         const br=w/2,bcx=x+w/2,bcy=y+w/2;
-        ctx.fillStyle=i%2===0?BODY_ALT:BODY_COLOR;
-        ctx.shadowColor="rgba(255,105,180,0.2)";ctx.shadowBlur=2;
+        ctx.fillStyle=i%2===0?BA:BC;ctx.shadowColor="rgba(255,105,180,.2)";ctx.shadowBlur=2;
         ctx.beginPath();ctx.arc(bcx,bcy,br,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-        ctx.fillStyle="rgba(255,255,255,0.35)";
-        ctx.beginPath();ctx.arc(bcx-br*0.25,bcy-br*0.25,br*0.3,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle="rgba(255,255,255,.35)";ctx.beginPath();ctx.arc(bcx-br*.25,bcy-br*.25,br*.3,0,Math.PI*2);ctx.fill();
       }
     }
   }
 
-  function drawFood() {
+  function drawFood(){
     if(!food)return;const cx=food.x*GRID+GRID/2,cy=food.y*GRID+GRID/2,r=GRID/2-2;
     const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r+4);
-    g.addColorStop(0,"rgba(255,107,138,0.22)");g.addColorStop(1,"transparent");
+    g.addColorStop(0,"rgba(255,107,138,.22)");g.addColorStop(1,"transparent");
     ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r+4,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=FOOD_COLOR;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle="rgba(255,255,255,0.5)";ctx.lineWidth=1.5;ctx.beginPath();
-    for(let a=0;a<Math.PI*4;a+=0.3){const rr=(a/(Math.PI*4))*r*0.8;const px=cx+Math.cos(a)*rr,py=cy+Math.sin(a)*rr;if(a===0)ctx.moveTo(cx,cy);else ctx.lineTo(px,py);}ctx.stroke();
-    ctx.fillStyle="rgba(255,255,255,0.4)";ctx.beginPath();ctx.arc(cx-r*0.25,cy-r*0.3,r*0.28,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=FC;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="rgba(255,255,255,.5)";ctx.lineWidth=1.5;ctx.beginPath();
+    for(let a=0;a<Math.PI*4;a+=.3){const rr=(a/(Math.PI*4))*r*.8,px=cx+Math.cos(a)*rr,py=cy+Math.sin(a)*rr;if(a===0)ctx.moveTo(cx,cy);else ctx.lineTo(px,py);}ctx.stroke();
+    ctx.fillStyle="rgba(255,255,255,.4)";ctx.beginPath();ctx.arc(cx-r*.25,cy-r*.3,r*.28,0,Math.PI*2);ctx.fill();
   }
 
-  function drawHeart(cx,cy,size){ctx.beginPath();ctx.moveTo(cx,cy+size*0.3);ctx.bezierCurveTo(cx,cy-size*0.1,cx-size,cy-size*0.1,cx-size,cy+size*0.3);ctx.bezierCurveTo(cx-size,cy+size*0.8,cx,cy+size,cx,cy+size);ctx.bezierCurveTo(cx,cy+size,cx+size,cy+size*0.8,cx+size,cy+size*0.3);ctx.bezierCurveTo(cx+size,cy-size*0.1,cx,cy-size*0.1,cx,cy+size*0.3);ctx.closePath();}
+  function drawH(cx,cy,s){ctx.beginPath();ctx.moveTo(cx,cy+s*.3);ctx.bezierCurveTo(cx,cy-s*.1,cx-s,cy-s*.1,cx-s,cy+s*.3);ctx.bezierCurveTo(cx-s,cy+s*.8,cx,cy+s,cx,cy+s);ctx.bezierCurveTo(cx,cy+s,cx+s,cy+s*.8,cx+s,cy+s*.3);ctx.bezierCurveTo(cx+s,cy-s*.1,cx,cy-s*.1,cx,cy+s*.3);ctx.closePath();}
+  function drawP(){for(const p of parts){ctx.globalAlpha=p.life;ctx.fillStyle=p.color;drawH(p.x,p.y,p.s);ctx.fill();}ctx.globalAlpha=1;}
 
-  function drawParticles(){for(const p of particles){ctx.globalAlpha=p.life;ctx.fillStyle=p.color;drawHeart(p.x,p.y,p.size);ctx.fill();}ctx.globalAlpha=1;}
-
-  function drawOverlay() {
-    if(!paused&&!gameOver)return;
-    ctx.fillStyle=OVERLAY_BG;ctx.fillRect(0,0,canvas.width,canvas.height);
+  function drawOV(){
+    if(!paused&&!over)return;
+    ctx.fillStyle=OV;ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.textAlign="center";ctx.textBaseline="middle";
-    const fs = Math.max(18, GRID * 1.5);
-    if(gameOver){
-      ctx.fillStyle="#e75480";ctx.font=`bold ${fs}px 'Quicksand',sans-serif`;
-      ctx.fillText("游戏结束 💔",canvas.width/2,canvas.height/2-20);
-      ctx.fillStyle="#d4708a";ctx.font=`${fs*0.6}px 'Quicksand',sans-serif`;
-      ctx.fillText(`得分: ${score}`,canvas.width/2,canvas.height/2+16);
-      ctx.fillStyle="#c08090";ctx.font=`${fs*0.5}px 'Quicksand',sans-serif`;
-      ctx.fillText("点击画面重新开始",canvas.width/2,canvas.height/2+42);
-    } else if(paused){
-      ctx.fillStyle="#e75480";ctx.font=`bold ${fs}px 'Quicksand',sans-serif`;
-      ctx.fillText("已暂停 🌸",canvas.width/2,canvas.height/2-8);
-      ctx.fillStyle="#d4708a";ctx.font=`${fs*0.55}px 'Quicksand',sans-serif`;
-      ctx.fillText("点击画面继续",canvas.width/2,canvas.height/2+22);
-    }
+    const fs=Math.max(16,GRID*1.3);
+    if(over){ctx.fillStyle="#e75480";ctx.font=`bold ${fs}px 'Quicksand',sans-serif`;ctx.fillText("游戏结束 💔",canvas.width/2,canvas.height/2-16);ctx.fillStyle="#d4708a";ctx.font=`${fs*.55}px 'Quicksand',sans-serif`;ctx.fillText(`得分: ${score}`,canvas.width/2,canvas.height/2+14);ctx.fillStyle="#c08090";ctx.font=`${fs*.45}px 'Quicksand',sans-serif`;ctx.fillText("点击画面重新开始",canvas.width/2,canvas.height/2+36);}
+    else if(paused){ctx.fillStyle="#e75480";ctx.font=`bold ${fs}px 'Quicksand',sans-serif`;ctx.fillText("已暂停 🌸",canvas.width/2,canvas.height/2-6);ctx.fillStyle="#d4708a";ctx.font=`${fs*.5}px 'Quicksand',sans-serif`;ctx.fillText("点击画面继续",canvas.width/2,canvas.height/2+20);}
   }
 
-  function draw(){ctx.fillStyle=BG_COLOR;ctx.fillRect(0,0,canvas.width,canvas.height);drawGrid();drawFood();drawSnake();drawParticles();drawOverlay();}
-  function animate(){updateParticles();draw();requestAnimationFrame(animate);}
-
-  function changeDir(dx,dy){if(gameOver)return;if(dx===-dir.x&&dy===-dir.y&&snake.length>1)return;nextDir={x:dx,y:dy};}
-
-  function startGame() {
-    if(gameLoop)clearInterval(gameLoop);
-    init();gameLoop=setInterval(step,speed);resizeCanvas();draw();
-  }
+  function draw(){ctx.fillStyle=BG;ctx.fillRect(0,0,canvas.width,canvas.height);drawGrid();drawFood();drawSnake();drawP();drawOV();}
+  function animate(){updP();draw();requestAnimationFrame(animate);}
+  function chDir(dx,dy){if(over)return;if(dx===-dir.x&&dy===-dir.y&&snake.length>1)return;nextDir={x:dx,y:dy};}
+  function startG(){if(loop)clearInterval(loop);init();loop=setInterval(step,speed);draw();}
 
   window.addEventListener("keydown",(e)=>{
     const k=e.key.toLowerCase();
-    if(k==="arrowup"||k==="w"){e.preventDefault();if(!paused)changeDir(0,-1)}
-    else if(k==="arrowdown"||k==="s"){e.preventDefault();if(!paused)changeDir(0,1)}
-    else if(k==="arrowleft"||k==="a"){e.preventDefault();if(!paused)changeDir(-1,0)}
-    else if(k==="arrowright"||k==="d"){e.preventDefault();if(!paused)changeDir(1,0)}
-    else if(k===" "||k==="spacebar"){e.preventDefault();
-      if(gameOver)startGame();
-      else{paused=!paused;if(paused){if(gameLoop)clearInterval(gameLoop);gameLoop=null}else{gameLoop=setInterval(step,speed)}draw();}
-    }else if(k==="r"){e.preventDefault();startGame();}
+    if(k==="arrowup"||k==="w"){e.preventDefault();if(!paused)chDir(0,-1)}
+    else if(k==="arrowdown"||k==="s"){e.preventDefault();if(!paused)chDir(0,1)}
+    else if(k==="arrowleft"||k==="a"){e.preventDefault();if(!paused)chDir(-1,0)}
+    else if(k==="arrowright"||k==="d"){e.preventDefault();if(!paused)chDir(1,0)}
+    else if(k===" "||k==="spacebar"){e.preventDefault();if(over)startG();else{paused=!paused;if(paused){if(loop)clearInterval(loop);loop=null}else{loop=setInterval(step,speed)}draw();}}
+    else if(k==="r"){e.preventDefault();startG();}
   });
 
-  // -- Touch / Click support --
-  let touchStart=null,touchMoved=false;
+  let ts=null;
+  canvas.addEventListener("touchstart",(e)=>{e.preventDefault();ts={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:false});
+  canvas.addEventListener("touchend",(e)=>{e.preventDefault();if(over||paused){startG();ts=null;return;}if(!ts)return;const dx=e.changedTouches[0].clientX-ts.x,dy=e.changedTouches[0].clientY-ts.y;if(Math.max(Math.abs(dx),Math.abs(dy))<15)return;if(Math.abs(dx)>Math.abs(dy))chDir(dx>0?1:-1,0);else chDir(0,dy>0?1:-1);ts=null;},{passive:false});
+  canvas.addEventListener("click",()=>{if(over||paused)startG();});
 
-  canvas.addEventListener("touchstart",(e)=>{
-    e.preventDefault();touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};touchMoved=false;
-  },{passive:false});
+  document.getElementById("dpadUp").addEventListener("click",()=>{if(!paused)chDir(0,-1)});
+  document.getElementById("dpadDown").addEventListener("click",()=>{if(!paused)chDir(0,1)});
+  document.getElementById("dpadLeft").addEventListener("click",()=>{if(!paused)chDir(-1,0)});
+  document.getElementById("dpadRight").addEventListener("click",()=>{if(!paused)chDir(1,0)});
+  document.getElementById("dpadPause").addEventListener("click",()=>{if(over)startG();else{paused=!paused;if(paused){if(loop)clearInterval(loop);loop=null}else{loop=setInterval(step,speed)}draw();}});
 
-  canvas.addEventListener("touchmove",(e)=>{touchMoved=true;},{passive:false});
-
-  canvas.addEventListener("touchend",(e)=>{
-    e.preventDefault();
-    if(gameOver||paused){startGame();touchStart=null;return;}
-    if(!touchStart)return;
-    const dx=e.changedTouches[0].clientX-touchStart.x;
-    const dy=e.changedTouches[0].clientY-touchStart.y;
-    const adx=Math.abs(dx),ady=Math.abs(dy);
-    if(Math.max(adx,ady)<15)return;
-    if(adx>ady)changeDir(dx>0?1:-1,0);else changeDir(0,dy>0?1:-1);
-    touchStart=null;
-  },{passive:false});
-
-  // Click to start/restart/resume
-  canvas.addEventListener("click",(e)=>{
-    if(gameOver||paused)startGame();
-  });
-
-  window.addEventListener("resize",()=>{resizeCanvas();draw();});
-
-    // D-pad touch controls
-  document.getElementById("dpadUp").addEventListener("click",()=>{if(!paused)changeDir(0,-1)});
-  document.getElementById("dpadDown").addEventListener("click",()=>{if(!paused)changeDir(0,1)});
-  document.getElementById("dpadLeft").addEventListener("click",()=>{if(!paused)changeDir(-1,0)});
-  document.getElementById("dpadRight").addEventListener("click",()=>{if(!paused)changeDir(1,0)});
-  document.getElementById("dpadPause").addEventListener("click",()=>{
-    if(gameOver){startGame()}else{paused=!paused;if(paused){if(gameLoop)clearInterval(gameLoop);gameLoop=null}else{gameLoop=setInterval(step,speed)}draw();}
-  });
+  window.addEventListener("resize",()=>{resize();draw();});
   best=getHighScore("snake");bestEl.textContent=best;
   init();draw();animate();
 })();
