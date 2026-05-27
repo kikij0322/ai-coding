@@ -69,6 +69,16 @@
   .tbtn.w { width:88px; height:36px; font-family:var(--font-display); font-size:12px; font-weight:700; }
 
   .back-btn { position:fixed; top:8px; left:8px; z-index:100; }
+@media (max-width:520px) {
+    .game-wrapper { flex-direction:column; align-items:center; max-height:none; }
+    .side-panel { flex-direction:row; flex-wrap:wrap; justify-content:center; gap:4px; }
+    .side-panel .info-box { width:auto; padding:3px 8px; }
+    .side-panel .info-box .v { font-size:14px; }
+    .side-panel .info-box .l { font-size:8px; }
+    .touch-controls { flex-direction:row; flex-wrap:wrap; gap:3px; justify-content:center; }
+    .touch-controls .touch-row { gap:3px; }
+  }
+  @media (max-width:600px) {
 </style>
 </head>
 <body>
@@ -120,7 +130,7 @@ eB.textContent=best;
 
 function resize(){
   const vh=window.innerHeight-70;
-  CELL=Math.max(20,Math.floor(vh/ROWS));
+  CELL=Math.max(18,Math.min(Math.floor(vh/ROWS),Math.floor((window.innerWidth-160)/COLS)));
   canvas.width=COLS*CELL;canvas.height=ROWS*CELL;
 }
 resize();
